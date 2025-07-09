@@ -9,9 +9,26 @@ from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
-history = []  # to store past reports
+# ---------------------------
+# INTRO SCREEN FOR FIRST TIME USERS
+# ---------------------------
+st.title("🚢 SPS–SOLAS Gap Analysis Tool")
+st.markdown("""
+Welcome to the **SPS–SOLAS Gap Analysis Tool**! 👋
 
-# Rule definitions with explanation, reference link, and optional review condition note
+This tool helps you evaluate the regulatory requirements when converting a vessel:
+- From **cargo to SPS** with less or more than 60 special personnel
+- From **SPS < 60 to SPS > 60**
+
+### 📋 How to Use:
+1. Use the **sidebar** to enter vessel info like GT, personnel, systems installed
+2. Click **Run Gap Analysis**
+3. View your compliance table and **download** Word/CSV reports
+
+---
+**Start by filling out the sidebar on the left ➡️**
+""")
+
 rules_info = {
     "SPS 2.2.3": ("Stability treated as cargo ship", "https://www.imo.org/en/OurWork/Safety/Pages/SpecialPurposeShips.aspx", "Review if special personnel > 60; may need to treat as passenger ship"),
     "SOLAS II-1/29.6.1.2": ("Auxiliary steering gear for ships ≤240 persons.", "https://www.imo.org/en/OurWork/Safety/Pages/SOLAS.aspx", "Review if vessel may exceed 240 personnel or lacks verified capacity"),
@@ -23,20 +40,60 @@ rules_info = {
     "SOLAS II-1/19": ("Emergency electrical power supply standards.", "https://www.imo.org/en/OurWork/Safety/Pages/SOLAS.aspx", "Review if backup duration or independence not fully confirmed")
 }
 
+def gap_analysis(gt, sp, self_prop, ums, fire, lifeboat, emergency, steer, radio, security):
+    if sp < 60:
+        scenario = "Cargo to SPS <60"
+    elif sp >= 60 and gt:
+        scenario = "Cargo to SPS >60"
+    else:
+        scenario = "SPS <60 to SPS >60"
+
+    results = []
+    def check(rule, condition_type):
+        desc, ref, note = rules_info[rule]
+        if condition_type == "compliant":
+            status = "✅ Compliant"
+            color = "#d4edda"
+        elif condition_type == "review":
+            status = "⚠️ Needs Review"
+            color = "#fff3cd"
+        else:
+            status = "❌ Non-compliant"
+            color = "#f8d7da"
+        results.append({
+            "Rule Regulation Number": rule,
+            "Description of Rule": f"{desc} ({note})" if note else desc,
+            "Regulatory Reference": ref,
+            "Observation / Current Status": "",
+            "Compliance or Not": status,
+            "RowColor": color,
+            "Audit Checklist Note": note if note else "Use rule description as guidance."
+        })
+
+    check("SPS 2.2.3", "compliant" if sp < 60 else "review")
+    check("SOLAS II-1/29.6.1.2", "compliant" if steer == "II-1/29.6.1.2" else "review")
+    check("SOLAS II-1/29.6.1.1", "compliant" if steer == "II-1/29.6.1.1" else "review")
+    check("SOLAS III", "compliant" if lifeboat in ["cargo", "passenger"] else "non-compliant")
+    check("SOLAS IV", "compliant" if radio else "non-compliant")
+    check("SOLAS XI-2", "compliant" if security else "review")
+    check("SOLAS II-2", "compliant" if fire else "non-compliant")
+    check("SOLAS II-1/19", "compliant" if emergency else "review")
+
+    df = pd.DataFrame(results)
+    return scenario, df
+
+def generate_summary(df):
+    compliant = df['Compliance or Not'].str.contains("Compliant").sum()
+    review = df['Compliance or Not'].str.contains("Review").sum()
+    noncompliant = df['Compliance or Not'].str.contains("Non-compliant").sum()
+    total = len(df)
+    return f"Out of {total} rules checked: {compliant} are compliant, {review} need review, and {noncompliant} are non-compliant."
+
 def export_to_word(scenario, df):
     doc = Document()
-
-    # Branding and title
     doc.add_heading("SPS–SOLAS Gap Analysis Report", 0)
-    doc.add_paragraph(f"Scenario: {scenario}").paragraph_format.space_after = Pt(12)
-
-    # Summary
-    summary = generate_summary(df)
-    doc.add_paragraph("Summary:").runs[0].bold = True
-    doc.add_paragraph(summary)
-
-    # Rule Table
-    doc.add_paragraph("\nDetailed Compliance Table:").runs[0].bold = True
+    doc.add_paragraph(f"Scenario: {scenario}")
+    doc.add_paragraph(generate_summary(df))
     table = doc.add_table(rows=1, cols=4)
     table.style = 'Table Grid'
     hdr_cells = table.rows[0].cells
@@ -46,15 +103,36 @@ def export_to_word(scenario, df):
     hdr_cells[3].text = 'Reference'
 
     for _, row in df.iterrows():
-        row_cells = table.add_row().cells
-        row_cells[0].text = row['Rule Regulation Number']
-        row_cells[1].text = row['Description of Rule']
-        row_cells[2].text = row['Compliance or Not']
-        row_cells[3].text = row['Regulatory Reference']
+        cells = table.add_row().cells
+        cells[0].text = row['Rule Regulation Number']
+        cells[1].text = row['Description of Rule']
+        cells[2].text = row['Compliance or Not']
+        cells[3].text = row['Regulatory Reference']
 
-    doc.add_page_break()
+    filename = f"gap_analysis_{scenario.replace(' ', '_')}.docx"
+    doc.save(filename)
+    with open(filename, "rb") as file:
+        st.download_button("📝 Download Word Report", file, file_name=filename)
 
-    word_path = f"gap_analysis_{scenario.replace(' ', '_')}.docx"
-    doc.save(word_path)
-    with open(word_path, "rb") as file:
-        st.download_button("📝 Download Word Report", file, file_name=word_path)
+# Sidebar inputs
+with st.sidebar:
+    gt = st.number_input("Gross Tonnage (GT)", min_value=0.0, value=500.0)
+    sp = st.number_input("Special Personnel Count", min_value=0, value=50)
+    self_prop = st.selectbox("Self Propelled?", ["Yes", "No"]) == "Yes"
+    ums = st.selectbox("UMS Certified?", ["Yes", "No"]) == "Yes"
+    fire = st.selectbox("Fire Protection Installed?", ["Yes", "No"]) == "Yes"
+    lifeboat = st.selectbox("Lifeboat Type", ["cargo", "passenger", "none"])
+    emergency = st.selectbox("Emergency Power Available?", ["Yes", "No"]) == "Yes"
+    steer = st.selectbox("Steering Gear Compliance", ["II-1/29.6.1.1", "II-1/29.6.1.2", "none"])
+    radio = st.selectbox("GMDSS Compliant?", ["Yes", "No"]) == "Yes"
+    security = st.selectbox("Security Plan Onboard?", ["Yes", "No"]) == "Yes"
+
+# Button to run analysis
+if st.button("Run Gap Analysis"):
+    scenario, df = gap_analysis(gt, sp, self_prop, ums, fire, lifeboat, emergency, steer, radio, security)
+    st.subheader(f"Scenario: {scenario}")
+    styled_df = df.style.apply(lambda x: [f'background-color: {c}' for c in df['RowColor']], axis=1)
+    st.dataframe(styled_df)
+    st.markdown("**Summary:**")
+    st.info(generate_summary(df))
+    export_to_word(scenario, df)
