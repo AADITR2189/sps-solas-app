@@ -1,13 +1,8 @@
 import pandas as pd
 import streamlit as st
 from datetime import datetime
-import os
-from fpdf import FPDF
 from docx import Document
-from docx.shared import Inches, Pt
-from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-from docx.oxml.ns import qn
-from docx.oxml import OxmlElement
+from docx.shared import Pt
 
 # ---------------------------
 # INTRO SCREEN FOR FIRST TIME USERS
@@ -53,20 +48,16 @@ def gap_analysis(gt, sp, self_prop, ums, fire, lifeboat, emergency, steer, radio
         desc, ref, note = rules_info[rule]
         if condition_type == "compliant":
             status = "✅ Compliant"
-            color = "#d4edda"
         elif condition_type == "review":
             status = "⚠️ Needs Review"
-            color = "#fff3cd"
         else:
             status = "❌ Non-compliant"
-            color = "#f8d7da"
         results.append({
             "Rule Regulation Number": rule,
             "Description of Rule": f"{desc} ({note})" if note else desc,
             "Regulatory Reference": ref,
             "Observation / Current Status": "",
             "Compliance or Not": status,
-            "RowColor": color,
             "Audit Checklist Note": note if note else "Use rule description as guidance."
         })
 
@@ -131,8 +122,8 @@ with st.sidebar:
 if st.button("Run Gap Analysis"):
     scenario, df = gap_analysis(gt, sp, self_prop, ums, fire, lifeboat, emergency, steer, radio, security)
     st.subheader(f"Scenario: {scenario}")
-    styled_df = df.style.apply(lambda x: [f'background-color: {c}' for c in df['RowColor']], axis=1)
-    st.dataframe(styled_df)
+    df_display = df.drop(columns=['Audit Checklist Note'])
+    st.dataframe(df_display)
     st.markdown("**Summary:**")
     st.info(generate_summary(df))
     export_to_word(scenario, df)
