@@ -227,7 +227,7 @@ export default function Progress() {
                     </div>
                   </div>
                   <span className="h-display num text-xl">
-                    {fmtNum(p.best1rm, 1)} <span className="font-sans text-sm text-muted">{wu}</span>
+                    {fmtNum(p.best1rm, 1)} <span className="font-sans text-sm font-normal text-muted">{wu}</span>
                   </span>
                 </li>
               ))}

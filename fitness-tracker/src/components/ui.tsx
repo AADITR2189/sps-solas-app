@@ -62,7 +62,7 @@ export function Stat({
   return (
     <Card index={index} className="p-4">
       <div className="eyebrow leading-tight">{label}</div>
-      <div className={`h-display num mt-2 text-[28px] ${toneText[tone]}`}>{value}</div>
+      <div className={`h-display num mt-2 text-[34px] ${toneText[tone]}`}>{value}</div>
       {sub !== undefined && <div className="mt-1 text-xs leading-snug text-muted">{sub}</div>}
     </Card>
   );
@@ -167,7 +167,7 @@ export function Sheet({
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative flex max-h-[88vh] w-full max-w-lg flex-col rounded-t-card border border-line bg-surface pb-safe sm:rounded-card">
         <div className="flex items-center justify-between border-b border-line px-5 py-3">
-          <h3 className="h-display text-xl">{title}</h3>
+          <h3 className="h-title text-2xl">{title}</h3>
           <button onClick={onClose} className="grid h-10 w-10 place-items-center rounded-btn hover:bg-raised" aria-label="Close">
             <X size={18} weight="bold" />
           </button>
@@ -182,7 +182,7 @@ export function Empty({ icon, title, children }: { icon?: ReactNode; title: stri
   return (
     <div className="flex flex-col items-center rounded-card border border-dashed border-line px-6 py-12 text-center">
       {icon && <div className="mb-3 text-muted">{icon}</div>}
-      <div className="h-display text-xl">{title}</div>
+      <div className="h-title text-2xl">{title}</div>
       {children && <div className="mt-1 max-w-xs text-sm text-muted">{children}</div>}
     </div>
   );
@@ -193,7 +193,7 @@ export function PageHeader({ title, sub, right }: { title: ReactNode; sub?: Reac
     <header className="flex items-end justify-between gap-3 pb-6 pt-8">
       <div className="min-w-0">
         {sub && <div className="eyebrow mb-1">{sub}</div>}
-        <h1 className="h-display truncate text-[28px] sm:text-[34px]">{title}</h1>
+        <h1 className="h-title text-[34px] [overflow-wrap:anywhere] sm:text-[42px]">{title}</h1>
       </div>
       {right && <div className="flex shrink-0 gap-2">{right}</div>}
     </header>

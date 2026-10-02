@@ -88,14 +88,14 @@ export default function LogHub() {
           className="flex h-32 flex-col items-start justify-between rounded-card border border-str/20 bg-str-soft p-5 text-left text-str transition-transform active:scale-[0.98]"
         >
           <Barbell size={28} weight="bold" />
-          <span className="h-display text-2xl leading-tight">Strength</span>
+          <span className="h-title text-3xl leading-tight">Strength</span>
         </button>
         <button
           onClick={() => nav(q({ kind: 'cardio' }))}
           className="flex h-32 flex-col items-start justify-between rounded-card border border-car/20 bg-car-soft p-5 text-left text-car transition-transform active:scale-[0.98]"
         >
           <Heartbeat size={28} weight="bold" />
-          <span className="h-display text-2xl leading-tight">Cardio</span>
+          <span className="h-title text-3xl leading-tight">Cardio</span>
         </button>
       </div>
 

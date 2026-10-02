@@ -43,7 +43,7 @@ export default function GoalsPage() {
         >
           <ArrowLeft size={18} weight="bold" />
         </button>
-        <h1 className="h-display flex-1 text-[34px]">Goals</h1>
+        <h1 className="h-title flex-1 text-[38px]">Goals</h1>
         <Button variant="primary" onClick={() => setOpen(true)}>
           <Plus size={16} weight="bold" /> New goal
         </Button>

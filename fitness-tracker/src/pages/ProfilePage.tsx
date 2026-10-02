@@ -60,7 +60,7 @@ export default function ProfilePage() {
         >
           <ArrowLeft size={18} weight="bold" />
         </button>
-        <h1 className="h-display text-[34px]">Profile</h1>
+        <h1 className="h-title text-[38px]">Profile</h1>
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-2 md:grid-cols-4">

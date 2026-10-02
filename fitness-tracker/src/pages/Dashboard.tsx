@@ -373,7 +373,7 @@ function Mini({ label, value, sub, tone = 'text-ink' }: { label: string; value: 
   return (
     <div className="min-w-0">
       <div className="text-xs text-muted">{label}</div>
-      <div className={`h-display truncate text-2xl ${tone}`}>{value}</div>
+      <div className={`h-display truncate text-[28px] ${tone}`}>{value}</div>
       {sub && <div className="truncate text-xs text-muted">{sub}</div>}
     </div>
   );

@@ -43,7 +43,7 @@ export function ChartCard({
     <Card index={index}>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
         <div>
-          <div className="h-display text-lg">{title}</div>
+          <div className="h-title text-xl">{title}</div>
           {sub && <div className="text-xs text-muted">{sub}</div>}
         </div>
         {right}

@@ -84,7 +84,11 @@ body::before {
 
 @layer components {
   .h-display {
-    @apply font-serif tracking-[-0.03em] leading-[1.1];
+    @apply font-display font-bold tracking-[0.005em] leading-[1.05];
+  }
+  /* Headings get the scoreboard look: condensed, bold, uppercase. */
+  .h-title {
+    @apply h-display uppercase;
   }
   .eyebrow {
     @apply font-mono text-[11px] uppercase tracking-[0.08em] text-muted;

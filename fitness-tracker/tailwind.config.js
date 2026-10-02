@@ -20,8 +20,9 @@ export default {
         danger: { DEFAULT: v('danger'), soft: v('danger-soft') },
       },
       fontFamily: {
-        sans: ['"Geist Sans"', '"SF Pro Display"', '"Helvetica Neue"', 'system-ui', 'sans-serif'],
-        serif: ['Newsreader', '"Lyon Text"', 'Georgia', 'serif'],
+        // "Athletic" type: condensed display face for headings and numbers, Barlow for UI text.
+        sans: ['Barlow', '"Helvetica Neue"', 'system-ui', 'sans-serif'],
+        display: ['"Barlow Condensed"', '"Arial Narrow"', 'sans-serif'],
         mono: ['"Geist Mono"', '"SF Mono"', 'ui-monospace', 'monospace'],
       },
       borderRadius: {

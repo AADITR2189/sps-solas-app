@@ -130,7 +130,7 @@ export default function SettingsPage() {
         >
           <ArrowLeft size={18} weight="bold" />
         </button>
-        <h1 className="h-display text-[34px]">Settings</h1>
+        <h1 className="h-title text-[38px]">Settings</h1>
       </div>
 
       {msg && (

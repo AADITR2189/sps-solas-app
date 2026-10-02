@@ -65,7 +65,7 @@ export default function CalendarPage() {
           <button onClick={() => move(-1)} className="grid h-11 w-11 place-items-center rounded-btn bg-raised" aria-label="Previous month">
             <CaretLeft size={18} weight="bold" />
           </button>
-          <div className="h-display text-xl">{formatMonth(`${monthPrefix}-01`)}</div>
+          <div className="h-title text-2xl">{formatMonth(`${monthPrefix}-01`)}</div>
           <button onClick={() => move(1)} className="grid h-11 w-11 place-items-center rounded-btn bg-raised" aria-label="Next month">
             <CaretRight size={18} weight="bold" />
           </button>
@@ -128,7 +128,7 @@ export default function CalendarPage() {
       </div>
 
       <div className="mb-2 mt-6 flex items-center justify-between px-1">
-        <h2 className="h-display text-xl">{formatLong(selected)}</h2>
+        <h2 className="h-title text-2xl">{formatLong(selected)}</h2>
       </div>
       {daySessions.length ? (
         <div className="space-y-2">

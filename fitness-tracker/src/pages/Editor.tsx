@@ -181,7 +181,7 @@ export default function Editor() {
         <button onClick={isNew ? onDiscard : goBack} className="grid h-12 w-12 place-items-center" aria-label="Back">
           <ArrowLeft size={20} weight="bold" />
         </button>
-        <div className="h-display flex-1 truncate text-lg">{isNew ? 'New workout' : 'Edit workout'}</div>
+        <div className="h-title flex-1 truncate text-xl">{isNew ? 'New workout' : 'Edit workout'}</div>
         <button onClick={onSaveTemplate} className="grid h-12 w-12 place-items-center text-muted" aria-label="Save as template" title="Save as template">
           <BookmarkSimple size={20} weight="bold" />
         </button>
@@ -262,7 +262,7 @@ export default function Editor() {
             <Card key={c.id}>
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="h-display truncate text-lg">{c.activity}</div>
+                  <div className="h-title truncate text-xl">{c.activity}</div>
                   <Tag tone="car">{c.category ?? categoryOf(c.activity)}</Tag>
                 </div>
                 <button

@@ -7,7 +7,7 @@ Gym Diary is a personal, single-user gym and cardio diary. It has no accounts an
 - light and dark themes
 - Excel and PDF export
 - exercise search and autocomplete
-- a warm, minimalist editorial design
+- a warm, minimalist design with athletic typography
 
 Sections:
 
@@ -100,7 +100,7 @@ The design is warm monochrome with muted pastel accents. It is flat, uses 1px bo
 | `gold` (+ soft) | `#956400` on `#FBF3DB` | `#E0B55C` on `#332B14` | Streaks, PRs, back-dating |
 | `danger` (+ soft) | `#9F2F2D` on `#FDEBEC` | `#E58A87` on `#3A2021` | Delete actions, calories series |
 
-- **Type:** Newsreader serif for headings and big numbers (tracking −0.03em, line-height 1.1). Geist Sans for UI text (line-height 1.6). Geist Mono for small uppercase eyebrows and metadata. All fonts are bundled locally, so they work offline.
+- **Type ("Athletic"):** Barlow Condensed Bold for headings and big numbers. Page, section and chart titles are uppercase, like a scoreboard. Barlow for UI text (line-height 1.6). Geist Mono for small uppercase labels and metadata. All fonts are bundled locally, so they work offline.
 - **Icons:** Phosphor, in bold weight, or fill for the active state.
 - **Shape:** cards use a 12px radius, buttons and inputs 6px, and tags are pills.
 - **Motion:** cards fade and rise in on scroll (IntersectionObserver, 600ms, staggered by 80ms), buttons scale to 0.98 when pressed, and a single slow ambient light drifts on a fixed layer. All of it is switched off under `prefers-reduced-motion`.

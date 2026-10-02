@@ -127,7 +127,7 @@ export async function exportPdf(d: ExportData, from?: string, to?: string) {
   let y = M;
 
   const h1 = (t: string) => {
-    doc.setFont('times', 'normal').setFontSize(26).setTextColor(...ink).text(t, M, y);
+    doc.setFont('helvetica', 'bold').setFontSize(24).setTextColor(...ink).text(t, M, y);
     y += 12;
   };
   const h2 = (t: string) => {
@@ -152,7 +152,7 @@ export async function exportPdf(d: ExportData, from?: string, to?: string) {
     y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
   };
 
-  h1('Gym Diary report');
+  h1('GYM DIARY REPORT');
   y += 10;
   doc
     .setFont('helvetica', 'normal')
