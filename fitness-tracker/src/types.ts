@@ -1,0 +1,215 @@
+// Core domain model. Persisted in IndexedDB as normalised stores (see src/db/db.ts);
+// the UI works with the assembled `Session` aggregate.
+
+export const MUSCLE_GROUPS = [
+  'CHEST',
+  'BACK',
+  'SHOULDERS',
+  'BICEPS',
+  'TRICEPS',
+  'FOREARMS',
+  'QUADS',
+  'HAMSTRINGS',
+  'GLUTES',
+  'CALVES',
+  'ABS',
+  'FULL BODY',
+] as const;
+
+export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
+
+export type BodyRegion = 'Upper Body' | 'Legs' | 'Core' | 'Full Body';
+
+export interface MuscleGroupInfo {
+  id: MuscleGroup;
+  name: string;
+  region: BodyRegion;
+  sortOrder: number;
+}
+
+export type SessionKind = 'strength' | 'cardio';
+
+/** ISO calendar date, e.g. "2026-10-02" (local time, no timezone). */
+export type DateKey = string;
+
+export interface SetEntry {
+  reps: number;
+  weight: number;
+}
+
+export interface StrengthEntry {
+  id: string;
+  exercise: string;
+  muscleGroup: MuscleGroup;
+  sets: SetEntry[];
+  notes?: string;
+}
+
+export interface CardioEntry {
+  id: string;
+  activity: string;
+  category?: string;
+  durationMin: number; // mandatory
+  distance?: number; // optional, in user's distance unit
+  calories?: number; // optional
+  avgHeartRate?: number; // optional, bpm
+  notes?: string;
+}
+
+/** One workout on one date. Strength and cardio are kept as separate sessions. */
+export interface Session {
+  id: string;
+  date: DateKey;
+  kind: SessionKind;
+  name?: string;
+  notes?: string;
+  /** Total workout time. Cardio sessions derive it from their entries when not set. */
+  durationMin?: number;
+  strength: StrengthEntry[];
+  cardio: CardioEntry[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface Exercise {
+  id: string;
+  name: string;
+  muscleGroup: MuscleGroup;
+  isCustom: boolean;
+}
+
+export interface CustomCardio {
+  id: string;
+  name: string;
+  category?: string;
+}
+
+export interface Favorite {
+  /** "strength:Bench Press" or "cardio:Outdoor Running" */
+  key: string;
+  addedAt: number;
+}
+
+export interface Template {
+  id: string;
+  name: string;
+  kind: SessionKind;
+  builtIn?: boolean;
+  strength: { exercise: string; muscleGroup: MuscleGroup; sets: number }[];
+  cardio: { activity: string; durationMin: number }[];
+}
+
+// ---------- Profile, body measurements, goals ----------
+
+export const GENDERS = ['Male', 'Female', 'Other', 'Prefer not to say'] as const;
+export type Gender = (typeof GENDERS)[number];
+
+export const FITNESS_GOALS = [
+  'Build Muscle',
+  'Lose Fat',
+  'Increase Strength',
+  'Improve Endurance',
+  'General Fitness',
+  'Maintain',
+] as const;
+export type FitnessGoalFocus = (typeof FITNESS_GOALS)[number];
+
+export const ACTIVITY_LEVELS = [
+  { id: 'sedentary', label: 'Sedentary', hint: 'Desk job, little exercise', factor: 1.2 },
+  { id: 'light', label: 'Lightly active', hint: '1–3 workouts a week', factor: 1.375 },
+  { id: 'moderate', label: 'Moderately active', hint: '3–5 workouts a week', factor: 1.55 },
+  { id: 'very', label: 'Very active', hint: '6–7 workouts a week', factor: 1.725 },
+  { id: 'extra', label: 'Athlete', hint: 'Twice a day or physical job', factor: 1.9 },
+] as const;
+export type ActivityLevel = (typeof ACTIVITY_LEVELS)[number]['id'];
+
+export interface Profile {
+  id: 'me';
+  name: string;
+  heightCm?: number;
+  /** Starting weight entered on the profile. Current weight comes from body measurements. */
+  weight?: number;
+  age?: number;
+  gender?: Gender;
+  goal?: FitnessGoalFocus;
+  activityLevel?: ActivityLevel;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface BodyMeasurement {
+  id: string;
+  date: DateKey;
+  weight: number; // in settings.weightUnit
+  bodyFatPct?: number;
+  waistCm?: number;
+  notes?: string;
+  createdAt: number;
+}
+
+export type GoalType =
+  | 'bodyweight' // reach a target body weight
+  | 'lift' // lift X weight on an exercise (single set)
+  | 'weeklySessions' // N workouts per week
+  | 'weeklyCardio' // N cardio minutes per week
+  | 'monthlyDays' // N active days this month
+  | 'totalVolume'; // lift a cumulative volume
+
+export interface FitnessGoal {
+  id: string;
+  type: GoalType;
+  title: string;
+  target: number;
+  /** Baseline captured when the goal was created (body weight / lift). */
+  start?: number;
+  exercise?: string;
+  deadline?: DateKey;
+  createdAt: number;
+  achievedAt?: number;
+  archived?: boolean;
+}
+
+export interface PersonalRecord {
+  exercise: string;
+  muscleGroup: MuscleGroup;
+  maxWeight: number;
+  maxWeightReps: number;
+  maxWeightDate: DateKey;
+  best1rm: number;
+  best1rmDate: DateKey;
+  bestSetVolume: number;
+  bestSessionVolume: number;
+}
+
+// ---------- Settings & backup ----------
+
+export type ThemePref = 'dark' | 'light' | 'system';
+
+export interface Settings {
+  weightUnit: 'kg' | 'lb';
+  distanceUnit: 'km' | 'mi';
+  weekStartsOn: 0 | 1; // 0 = Sunday, 1 = Monday
+  theme: ThemePref;
+}
+
+export const DEFAULT_SETTINGS: Settings = {
+  weightUnit: 'kg',
+  distanceUnit: 'km',
+  weekStartsOn: 1,
+  theme: 'dark',
+};
+
+export interface BackupFile {
+  app: 'gym-diary';
+  version: 1 | 2;
+  exportedAt: string;
+  sessions: Session[];
+  customExercises?: { id: string; name: string; muscleGroup: MuscleGroup }[];
+  customCardio?: CustomCardio[];
+  favorites?: Favorite[];
+  templates?: Template[];
+  settings?: Partial<Settings>;
+  profile?: Profile | null;
+  measurements?: BodyMeasurement[];
+  goals?: FitnessGoal[];
+}
