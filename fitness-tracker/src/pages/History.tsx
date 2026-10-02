@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Search, ListChecks } from 'lucide-react';
+import { MagnifyingGlass, ListChecks } from '@phosphor-icons/react';
 import { useData } from '../hooks/useData';
 import { Chip, Empty, PageHeader, Stat, inputCls } from '../components/ui';
 import SessionCard from '../components/SessionCard';
@@ -66,7 +66,7 @@ export default function History() {
     <div>
       <PageHeader title="History" sub={`${sessions.length} workouts logged`} />
       <div className="relative">
-        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+        <MagnifyingGlass size={18} weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search exercise, activity or notes" className={`${inputCls} pl-10`} />
       </div>
       <div className="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4">
@@ -76,8 +76,8 @@ export default function History() {
       </div>
       {preset === 'custom' && (
         <div className="mt-2 grid grid-cols-2 gap-2">
-          <label className="text-xs text-muted">From<input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} className={`${inputCls} mt-1 [color-scheme:dark]`} /></label>
-          <label className="text-xs text-muted">To<input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} className={`${inputCls} mt-1 [color-scheme:dark]`} /></label>
+          <label className="text-xs text-muted">From<input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} className={`${inputCls} mt-1`} /></label>
+          <label className="text-xs text-muted">To<input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} className={`${inputCls} mt-1`} /></label>
         </div>
       )}
       <div className="mt-2 grid grid-cols-2 gap-2">
@@ -94,18 +94,18 @@ export default function History() {
 
       <div className="mt-3 grid grid-cols-3 gap-2">
         <Stat label="Sessions" value={sum.sessions} sub={`${sum.days} days`} />
-        <Stat label="Volume" tone="accent" value={fmtNum(sum.volume)} sub={settings.weightUnit} />
-        <Stat label="Cardio" tone="cardio" value={fmtMinutes(sum.cardioMin)} />
+        <Stat label="Volume" tone="str" value={fmtNum(sum.volume)} sub={settings.weightUnit} />
+        <Stat label="Cardio" tone="car" value={fmtMinutes(sum.cardioMin)} />
       </div>
 
       <div className="mt-4 space-y-4">
         {grouped.map(([date, list]) => (
           <div key={date}>
-            <div className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted">{formatLong(date)}</div>
+            <div className="mb-2 px-1 eyebrow">{formatLong(date)}</div>
             <div className="space-y-2">{list.map((s) => <SessionCard key={s.id} s={s} showDate={false} />)}</div>
           </div>
         ))}
-        {!grouped.length && <Empty icon={<ListChecks size={32} />} title="No workouts match">Try a wider date range or clear the filters.</Empty>}
+        {!grouped.length && <Empty icon={<ListChecks size={32} weight="bold" />} title="No workouts match">Try a wider date range or clear the filters.</Empty>}
       </div>
     </div>
   );

@@ -1,24 +1,45 @@
 import { createContext, useContext, useEffect, useMemo, useState, createElement, type ReactNode } from 'react';
 import * as db from '../db/db';
 import { EXERCISE_LIBRARY } from '../data/exercises';
-import { BUILT_IN_TEMPLATES, CARDIO_ACTIVITIES } from '../data/cardio';
-import type { CustomCardio, CustomExercise, Favorite, MuscleGroup, Session, Settings, Template } from '../types';
+import { BUILT_IN_TEMPLATES, CARDIO_CATEGORIES, cardioCategory } from '../data/cardio';
+import type {
+  BodyMeasurement,
+  CustomCardio,
+  Exercise,
+  Favorite,
+  FitnessGoal,
+  MuscleGroup,
+  PersonalRecord,
+  Profile,
+  Session,
+  Settings,
+  Template,
+} from '../types';
 import { DEFAULT_SETTINGS, MUSCLE_GROUPS } from '../types';
+import { applyTheme } from '../lib/theme';
 
 interface DataState {
   ready: boolean;
   sessions: Session[];
-  customExercises: CustomExercise[];
+  exercises: Exercise[];
   customCardio: CustomCardio[];
   favorites: Favorite[];
   userTemplates: Template[];
   settings: Settings;
+  profile: Profile | null;
+  measurements: BodyMeasurement[];
+  goals: FitnessGoal[];
+  records: PersonalRecord[];
 }
 
 interface DataCtx extends DataState {
-  /** Built-in + custom exercises per muscle group. */
+  /** Built-in + custom exercise names per muscle group. */
   library: Record<MuscleGroup, string[]>;
+  customExercises: Exercise[];
+  /** Cardio activities grouped by category (built-in + custom). */
+  cardioGroups: { category: string; activities: string[] }[];
   cardioActivities: string[];
+  categoryOf: (activity: string) => string;
   templates: Template[];
   favoriteSet: Set<string>;
 }
@@ -30,25 +51,35 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<DataState>({
     ready: false,
     sessions: [],
-    customExercises: [],
+    exercises: [],
     customCardio: [],
     favorites: [],
     userTemplates: [],
     settings: DEFAULT_SETTINGS,
+    profile: null,
+    measurements: [],
+    goals: [],
+    records: [],
   });
 
   useEffect(() => {
     let alive = true;
     const load = async () => {
-      const [sessions, customExercises, customCardio, favorites, userTemplates, settings] = await Promise.all([
-        db.getAllSessions(),
-        db.getCustomExercises(),
-        db.getCustomCardio(),
-        db.getFavorites(),
-        db.getUserTemplates(),
-        db.getSettings(),
-      ]);
-      if (alive) setState({ ready: true, sessions, customExercises, customCardio, favorites, userTemplates, settings });
+      const [sessions, exercises, customCardio, favorites, userTemplates, settings, profile, measurements, goals, records] =
+        await Promise.all([
+          db.getAllSessions(),
+          db.getExercises(),
+          db.getCustomCardio(),
+          db.getFavorites(),
+          db.getUserTemplates(),
+          db.getSettings(),
+          db.getProfile(),
+          db.getMeasurements(),
+          db.getGoals(),
+          db.getPersonalRecords(),
+        ]);
+      if (alive)
+        setState({ ready: true, sessions, exercises, customCardio, favorites, userTemplates, settings, profile, measurements, goals, records });
     };
     load();
     db.requestPersistentStorage();
@@ -59,17 +90,27 @@ export function DataProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  useEffect(() => applyTheme(state.settings.theme), [state.settings.theme]);
+
   const value = useMemo<DataCtx>(() => {
     const library = {} as Record<MuscleGroup, string[]>;
     for (const g of MUSCLE_GROUPS) {
-      const custom = state.customExercises.filter((e) => e.muscleGroup === g).map((e) => e.name);
-      library[g] = [...new Set([...EXERCISE_LIBRARY[g], ...custom])];
+      const fromDb = state.exercises.filter((e) => e.muscleGroup === g).map((e) => e.name);
+      // Keep the curated order for built-ins, then append customs alphabetically.
+      library[g] = [...new Set([...EXERCISE_LIBRARY[g], ...fromDb.sort()])];
     }
-    const cardioActivities = [...new Set([...CARDIO_ACTIVITIES, ...state.customCardio.map((c) => c.name)])];
+    const customCat = new Map(state.customCardio.map((c) => [c.name, c.category ?? 'Other Cardio']));
+    const cardioGroups = CARDIO_CATEGORIES.map((c) => ({
+      category: c.category,
+      activities: [...c.activities, ...state.customCardio.filter((x) => (x.category ?? 'Other Cardio') === c.category).map((x) => x.name)],
+    }));
     return {
       ...state,
       library,
-      cardioActivities,
+      customExercises: state.exercises.filter((e) => e.isCustom),
+      cardioGroups,
+      cardioActivities: cardioGroups.flatMap((g) => g.activities),
+      categoryOf: (a: string) => cardioCategory(a, customCat.get(a)),
       templates: [...BUILT_IN_TEMPLATES, ...state.userTemplates],
       favoriteSet: new Set(state.favorites.map((f) => f.key)),
     };

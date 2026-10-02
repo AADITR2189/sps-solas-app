@@ -1,290 +1,258 @@
 # Gym Diary: Design & Architecture
 
-A personal, single-user gym and cardio diary. It has no accounts and no server, and every record stays on the device.
+Gym Diary is a personal, single-user gym and cardio diary. It has no accounts and no server, and every record stays on the device. Version 2 adds:
 
-This document covers the ten requested deliverables:
+- a profile, body measurements and goals
+- a normalised database
+- light and dark themes
+- Excel and PDF export
+- exercise search and autocomplete
+- a warm, minimalist editorial design
+
+Sections:
 
 1. [Application architecture](#1-application-architecture)
-2. [Database schema](#2-database-schema-indexeddb)
-3. [UI design system](#3-user-interface-design)
-4. [Mobile screens](#4-mobile-screens)
-5. [Dashboard wireframes](#5-dashboard-wireframes)
-6. [Data model](#6-data-model)
+2. [Database design](#2-database-design)
+3. [UI design system](#3-ui-design-system)
+4. [Screens](#4-screens)
+5. [Dashboard wireframe](#5-dashboard-wireframe)
+6. [Data model and metrics](#6-data-model-and-metrics)
 7. [Component structure](#7-component-structure)
-8. [PWA strategy](#8-pwa-implementation-strategy)
-9. [Source tree](#9-complete-source-code-structure)
-10. [Future enhancements](#10-future-enhancement-recommendations)
+8. [PWA strategy](#8-pwa-strategy)
+9. [Source tree](#9-source-tree)
+10. [Scaling and future enhancements](#10-scaling-and-future-enhancements)
 
 ---
 
 ## 1. Application architecture
 
 ```
-┌──────────────────────────── Phone / Browser ─────────────────────────────┐
-│                                                                           │
-│  React UI (pages + components, Tailwind)                                  │
-│     │  reads                     ▲ re-render                              │
-│     ▼                            │                                        │
-│  DataProvider (React context) ───┘  loads all stores → derived lists      │
-│     │  calls                     ▲ notify() after each write              │
-│     ▼                            │                                        │
-│  db.ts (idb wrapper: CRUD, backup/restore, settings)                      │
-│     │                                                                     │
-│     ▼                                                                     │
-│  IndexedDB "gym-diary"  ← persistent storage requested (no eviction)      │
-│                                                                           │
-│  lib/stats.ts  pure functions → streaks, PRs, volume, trends (memoised)   │
-│  lib/csv.ts    CSV export (Excel-friendly, BOM) & import parser           │
-│                                                                           │
-│  Service worker (Workbox via vite-plugin-pwa) → precaches app shell       │
-└───────────────────────────────────────────────────────────────────────────┘
+React UI (pages, components, Tailwind tokens)
+   │ reads                         ▲ re-render on notify()
+   ▼                               │
+DataProvider (context) ── loads every store, builds Session aggregates and derived lookups
+   │ calls
+   ▼
+db.ts  ── repository layer: assembles and splits aggregates, materialises PRs, migrations
+   ▼
+IndexedDB "gym-diary" v2 (normalised stores, persistent-storage requested)
+
+lib/stats.ts   pure analytics: volume, streaks, trends, PRs, improvement, annual
+lib/goals.ts   live goal progress and completion %
+lib/body.ts    current weight, weight change, BMI, maintenance calories
+lib/export.ts  .xlsx workbook + PDF report (lazy-loaded)
+lib/csv.ts     CSV export/import (round-trips)
+Service worker (Workbox) precaches the app shell, fonts and export libraries for offline use
 ```
 
 **Key decisions**
 
 | Decision | Why |
 |---|---|
-| No backend, IndexedDB only | Single user. Works offline, needs no account, and costs nothing to run. |
-| Load all data into memory | A heavy lifter logs fewer than 2,000 sessions in 5 years, which is a few MB. Stats run in milliseconds and the code stays simple. |
-| Analytics are computed on the fly, never stored | There is no derived data to go stale. Editing a past workout updates every chart immediately. |
-| Strength and cardio are separate `Session`s | Matches the spec. Cardio never asks for sets, reps or weight. |
-| `HashRouter` | Works on any static host (GitHub Pages, Netlify, a USB stick) with no server rewrites, and works offline. |
-| Relative `base: './'` | The same build runs at `/`, at `/repo-name/`, or anywhere else. |
-| Draft autosave (localStorage) | If the app is closed mid-workout, the session can be resumed from the Log screen. |
-
-**Stack:** React 18, TypeScript (strict), Tailwind CSS 3, Vite 5, `idb`, Recharts, `vite-plugin-pwa` (Workbox) and `lucide-react` icons.
+| No backend, IndexedDB only | Single user. Works offline, needs no account, costs nothing to run. |
+| Normalised stores behind a repository | Matches a relational model (see `schema.sql`), so a sync backend can be added later without reshaping data. The UI still works with a convenient `Session` aggregate. |
+| Analytics computed live; only PRs materialised | Nothing goes stale when a past workout is edited. PRs are rebuilt on every save or delete so they can be read directly. |
+| Strength and cardio are separate sessions | Cardio never asks for sets, reps or weight. |
+| `HashRouter` with `base: './'` | Runs on any static host, at any path, offline. |
+| Export libraries loaded on demand | jsPDF and the xlsx writer are about 550 KB. They are never loaded unless you export, but they are precached so exporting works offline. |
 
 ---
 
-## 2. Database schema (IndexedDB)
+## 2. Database design
 
-Database `gym-diary`, version 1, defined in `src/db/db.ts`:
+The design is normalised. The same entities exist in two forms:
 
-| Object store | Key | Indexes | Contents |
+- **On-device:** IndexedDB, in `src/db/db.ts`
+- **Server-ready:** PostgreSQL DDL, in [`docs/schema.sql`](schema.sql)
+
+| Table (SQL) | IndexedDB store | Key / indexes | Purpose |
 |---|---|---|---|
-| `sessions` | `id` (uuid) | `by-date` (date), `by-kind` (kind) | One workout session, with its exercises/sets or cardio entries embedded |
-| `customExercises` | `id` | n/a | User-created strength exercises, each tagged with a muscle group |
-| `customCardio` | `id` | n/a | User-created cardio activities |
-| `favorites` | `key` (`"strength:Name"` / `"cardio:Name"`) | n/a | Starred exercises for quick entry |
-| `templates` | `id` | n/a | User-saved templates (the 7 built-ins live in code) |
-| `kv` | string key | n/a | `settings`: units and week start |
+| `users` | `users` | `id = "me"` | Profile: name, height, weight, age, gender, fitness goal, activity level |
+| `muscle_groups` | `muscleGroups` | `id` | 12 groups with region (Upper Body / Legs / Core / Full Body). Seeded on start-up. |
+| `exercises` | `exercises` | `id`; by-group, by-name | About 115 built-ins (stable ids such as `chest:barbell-bench-press`) plus custom exercises |
+| `workout_sessions` | `workoutSessions` | `id`; by-date, by-kind | Session header: date, kind, name, notes, duration |
+| `workout_exercises` (+ `workout_sets`) | `workoutExercises` | `id`; by-session, by-name | Exercises in a session, in order. Sets are embedded as an array on the device and are a child table in SQL. |
+| `cardio_sessions` | `cardioSessions` | `id`; by-session, by-date | Activity, type, duration\*, distance, calories, average heart rate, notes |
+| `fitness_goals` | `fitnessGoals` | `id` | Goal type, target, baseline, deadline, achieved and archived flags |
+| `body_measurements` | `bodyMeasurements` | `id`; by-date | Weight, body fat %, waist |
+| `personal_records` | `personalRecords` | `exercise` | Materialised: heaviest set, best e1RM, best set and session volume |
+| `cardio_activities` | `customCardio` | `id` | Custom activities. Built-ins live in code. |
+| `favorites`, `workout_templates` | `favorites`, `templates` | n/a | Quick entry |
+| n/a | `kv` | `settings` | Units, week start, theme |
 
-Exercises and sets are **embedded** inside the session document, not normalised into separate tables. A session is always read and written as one unit, so embedding gives atomic saves and one-read loads. "Frequently used", "recent" and PRs are derived by scanning sessions.
-
-**Migrations:** bump the version in `openDB('gym-diary', N)` and add a branch in `upgrade(db, oldVersion)`. Backups carry `version: 1` for forward compatibility.
+**Migrations.** `openDB(..., 2, upgrade)` creates the v2 stores. When it upgrades from v1, it reads the old embedded `sessions` store and splits each session into header, exercise and cardio rows. It moves custom exercises into `exercises`, builds `personalRecords`, then drops the old stores. This has been tested with real v1 data. Backups carry a `version` field, and restore accepts both v1 and v2 files.
 
 ---
 
-## 3. User interface design
+## 3. UI design system
 
-| Token | Value | Use |
+The design is warm monochrome with muted pastel accents. It is flat, uses 1px borders, and has no gradients or heavy shadows.
+
+| Token | Light | Dark | Use |
+|---|---|---|---|
+| `bg` | `#F7F6F3` bone | `#191919` | Canvas |
+| `surface` / `raised` | `#FFFFFF` / `#F1F0EC` | `#202020` / `#2A2A28` | Cards / hover and inputs |
+| `line` | `#EAEAEA` | `#2F2F2D` | Every border and divider (1px) |
+| `ink` / `muted` | `#2F3437` / `#787774` | `#EDECE8` / `#9B9A97` | Text |
+| `primary` | `#111111` | `#EDECE8` (inverted) | Primary buttons, active filters |
+| `str` (+ `str-soft`) | `#346538` on `#EDF3EC` | `#8FC495` on `#1F2B20` | Strength identity |
+| `car` (+ `car-soft`) | `#1F6C9F` on `#E1F3FE` | `#7BB8E0` on `#1B2A35` | Cardio identity |
+| `gold` (+ soft) | `#956400` on `#FBF3DB` | `#E0B55C` on `#332B14` | Streaks, PRs, back-dating |
+| `danger` (+ soft) | `#9F2F2D` on `#FDEBEC` | `#E58A87` on `#3A2021` | Delete actions, calories series |
+
+- **Type:** Newsreader serif for headings and big numbers (tracking −0.03em, line-height 1.1). Geist Sans for UI text (line-height 1.6). Geist Mono for small uppercase eyebrows and metadata. All fonts are bundled locally, so they work offline.
+- **Icons:** Phosphor, in bold weight, or fill for the active state.
+- **Shape:** cards use a 12px radius, buttons and inputs 6px, and tags are pills.
+- **Motion:** cards fade and rise in on scroll (IntersectionObserver, 600ms, staggered by 80ms), buttons scale to 0.98 when pressed, and a single slow ambient light drifts on a fixed layer. All of it is switched off under `prefers-reduced-motion`.
+- **Theme:** Dark (default), Light or System. The choice is applied before first paint by an inline script, so there is no flash of the wrong theme.
+
+---
+
+## 4. Screens
+
+The bottom navigation reads **Home · Calendar · [+] · History · Progress**. The Home header links to **Profile** and **Settings**. The Log screen links to the **Exercise library**.
+
+| Screen | Route | Contents |
 |---|---|---|
-| `bg` | `#0b0d10` | App background (dark by default) |
-| `surface` / `raised` | `#14171c` / `#1c2027` | Cards / inputs and secondary buttons |
-| `line` | `#262b34` | Borders and chart grid |
-| `muted` | `#8b93a1` | Secondary text and axis labels |
-| `accent` (lime) | `#a3e635` | **Strength** identity, primary actions |
-| `cardio` (sky) | `#38bdf8` | **Cardio** identity |
-| `gold` | `#facc15` | Streaks, PRs, back-dated warnings |
-| `danger` | `#f87171` | Delete actions |
-
-**Principles**
-
-- Touch targets are at least 44px. Set inputs are 48px tall with a large font, use the numeric keypad, and select their contents when tapped.
-- Strength is always lime and cardio is always sky blue, across calendar dots, buttons and charts.
-- The "Add set" button copies the previous set, and new exercises pre-fill from the last time you did them. Most sets need zero typing.
-- A bottom sheet is used for every picker, so it is reachable with one thumb.
-- Charts use a single hue per chart with names on the axis, so there are no legends to decode. Every chart has a tooltip.
+| Dashboard | `#/` | Today, overview tiles, week and month, the strength and cardio analytics below, recent workouts, goal completion |
+| Log | `#/log` | Date (back-dating), Strength and Cardio buttons, templates, favourites, frequent and recent, draft resume |
+| Editor | `#/log/edit` | Date, duration, name. Strength: autocomplete quick-add, browse with filters, sets grid, "last time" hint. Cardio: duration\*, distance, calories, average HR, notes. Save as template, delete. |
+| Calendar | `#/calendar` | Month grid with strength and cardio dots, day detail, backfill buttons |
+| History | `#/history` | Search, date presets or a custom range, type and muscle filters |
+| Progress | `#/progress` | Streak, days this month, body weight, goal %, active days, body-weight trend, goals, exercise progression, strength improvement, strongest lifts, muscle frequency, personal bests |
+| Profile | `#/profile` | Name, height, weight, age, gender, fitness goal, activity level. BMI and maintenance calories. Weigh-in log with trend. |
+| Goals | `#/goals` | Six goal types, live progress bars, overall %, deadline, archive and restore |
+| Exercises | `#/exercises` | Searchable, filterable library (by muscle, Legs, favourites, recent, frequent, custom) with per-exercise history, PR and "Log today" |
+| Settings | `#/settings` | Theme, units, Excel/PDF/CSV export with a date range, backup and restore, CSV import, storage, install help, custom exercises, sample data, erase |
 
 ---
 
-## 4. Mobile screens
+## 5. Dashboard wireframe
 
-The bottom navigation reads: **Home · Calendar · [ + Log ] · History · Progress**. Settings sits behind the gear icon on Home.
+```
+FRIDAY, OCTOBER 2, 2026                 [profile] [settings]
+Good evening, Aadi
+┌───────────────────────────────────────────────┐
+│ ○ No workout logged today                [+] │
+└───────────────────────────────────────────────┘
+OVERVIEW
+[Total workouts][Streak      ][Days this month][Avg duration]
+[Total volume  ][Current wt  ][Weight change  ][Goals %     ]
+[This week: sessions · volume · cardio][This month: ...     ]
+STRENGTH                                  (Weekly | Monthly)
+[Weekly/Monthly volume   ][Volume lifted by day (30d)]
+[Volume by muscle group  ][Weight progression        ]
+[Most performed          ][Personal records          ]
+[Annual progress: year · workouts · days · volume (+%) · cardio]
+CARDIO                                    (Weekly | Monthly)
+[Total][This week][This month]
+[Weekly/Monthly cardio   ][Cardio by type            ]
+[Activity breakdown      ][Distance trend            ]
+[Calories burned trend   ]
+RECENT WORKOUTS · Goal completion bar
+```
 
-| Screen | Route | Purpose |
-|---|---|---|
-| Dashboard | `#/` | Today's status, week and month summary, strength and cardio analytics, recent workouts |
-| Log hub | `#/log` | Date picker for back-dating, Strength/Cardio buttons, one-tap templates, favorites, frequent and recent exercises, resume draft |
-| Workout editor | `#/log/edit?…` | Add, edit or delete a session: date, type, exercises → sets (weight × reps), or cardio (duration\*, distance, calories), plus notes. Can also save the session as a template. |
-| Calendar | `#/calendar?d=YYYY-MM-DD` | Month grid with strength and cardio dots. Tapping a day lists its workouts and offers **+ Strength / + Cardio** to backfill. Hovering shows a summary. |
-| History | `#/history` | Search, date-range presets or a custom range, type filter, muscle filter, totals for the filtered set |
-| Progress | `#/progress` | Streaks, active days, weight progression per exercise (top weight, e1RM or volume), strongest lifts, muscle frequency, personal-best table |
-| Settings & data | `#/settings` | Units, CSV export/import, JSON backup/restore, storage protection, install help, custom exercises, sample data, erase |
-
-Supported editor URL parameters: `id`, `date`, `kind`, `template`, `exercise`+`group`, `activity`, `resume`. Every quick-entry chip is just a link with these parameters.
+On phones each row stacks into a single column. From `md` upwards the charts sit in two columns and the tiles in four.
 
 ---
 
-## 5. Dashboard wireframes
+## 6. Data model and metrics
 
-```
-┌─────────────────────────────┐   ┌─────────────────────────────┐
-│ Fri, 2 Oct 2026          ⚙  │   │ PROGRESS                    │
-│ Gym Diary                   │   │ ┌──────────┐ ┌──────────┐   │
-│ ┌─────────────────────────┐ │   │ │🔥 5 days │ │📅 12     │   │
-│ │✓ Trained today      [+] │ │   │ │best 14   │ │of 20 days│   │
-│ │  Push Day · 18 sets ›   │ │   │ └──────────┘ └──────────┘   │
-│ └─────────────────────────┘ │   │ Active days / month  ▂▅▇█   │
-│ ┌──────────┐ ┌──────────┐   │   │ WEIGHT PROGRESSION          │
-│ │STREAK 5d │ │TOTAL 128 │   │   │ [Bench Press ▾]  ▲ 12.5%    │
-│ └──────────┘ └──────────┘   │   │ (Top wt)(e1RM)(Volume)      │
-│ THIS WEEK                   │   │      ●──●──●──●─●           │
-│ [Sess 3][Vol 13.8k][Car 40m]│   │ STRONGEST LIFTS (e1RM)      │
-│ THIS MONTH                  │   │ 1 Deadlift        150 kg    │
-│ [Days 9][Vol 52k][Car 3h]   │   │ 2 Squat           120 kg    │
-│ STRENGTH                    │   │ MUSCLE FREQUENCY [30d][All] │
-│ [Total vol][Sessions]       │   │ Chest ████████ 8            │
-│ Weekly volume  (Week|Month) │   │ Back  ██████   6            │
-│  ▂▃▅▅▆▇█▇▆▇█               │   │ PERSONAL BESTS (Heavy|Rec.) │
-│ Volume by muscle  ███ ██ █  │   │ Exercise  Best set   e1RM   │
-│ Most performed  1..5        │   └─────────────────────────────┘
-│ Recent PRs 🏆               │
-│ CARDIO                      │
-│ [All-time][Week][Month]     │
-│ Cardio minutes ▂▅▃▇         │
-│ Activity breakdown ███ ██   │
-│ Distance trend  ╱╲╱         │
-│ RECENT WORKOUTS ›           │
-├─────────────────────────────┤
-│ ⌂   📅    [ + ]   ☰    📈   │
-└─────────────────────────────┘
-```
+TypeScript types are defined in `src/types.ts`. Metric definitions:
 
----
+| Metric | Definition |
+|---|---|
+| Volume | Σ reps × weight. Shown per set, per exercise, per session, per day, week, month and year. |
+| Estimated 1RM | Epley formula: `weight × (1 + reps/30)` |
+| Average workout duration | Mean of sessions that have a duration. Strength sessions use the entered duration; cardio sessions use summed minutes. |
+| Current weight | The latest weigh-in, falling back to the profile weight |
+| Weight change | Latest weigh-in minus the profile start weight (or the first weigh-in). The Progress screen also shows the 30-day change. |
+| Consistency streak | Consecutive days with a session, ending today or yesterday |
+| Strength improvement | First logged e1RM compared with the best e1RM of the last three sessions, per exercise |
+| Goal completion % | Per goal: current ÷ target. Body-weight and lift goals measure from their baseline. Overall: the mean across active goals. |
+| BMI / maintenance kcal | BMI = kg/m². Mifflin–St Jeor resting energy × activity factor (1.2–1.9). |
 
-## 6. Data model
+**Exports**
 
-TypeScript definitions are in `src/types.ts`.
+- **Excel (.xlsx):** six sheets (Sessions, Strength sets, Cardio, Personal records, Body weight, Goals), with typed dates and numbers and a frozen header row.
+- **PDF:** a report with profile, summary, volume by muscle, PRs, goals, body weight and the workout log, with page numbers.
+- **CSV:** one row per set or cardio entry, UTF-8 with a BOM. It round-trips through import.
 
-```ts
-Session {
-  id: string            // uuid
-  date: 'YYYY-MM-DD'    // local calendar date, can be in the past (back-dating)
-  kind: 'strength' | 'cardio'
-  name?: string         // "Push Day"
-  notes?: string
-  strength: StrengthEntry[]   // empty for cardio sessions
-  cardio:   CardioEntry[]     // empty for strength sessions
-  createdAt, updatedAt: number
-}
-StrengthEntry { id, exercise, muscleGroup, sets: { reps, weight }[], notes? }
-CardioEntry   { id, activity, durationMin (required), distance?, calories?, notes? }
-Template      { id, name, kind, builtIn?, strength: {exercise, muscleGroup, sets}[], cardio: {activity, durationMin}[] }
-Settings      { weightUnit: 'kg'|'lb', distanceUnit: 'km'|'mi', weekStartsOn: 0|1 }
-```
-
-**Derived metrics** (`src/lib/stats.ts`):
-
-- Set volume is `reps × weight`. Exercise volume is the sum over its sets, and session volume is the sum over its exercises.
-- Estimated 1RM uses the Epley formula: `weight × (1 + reps/30)`.
-- The current streak counts consecutive days with a session, ending today, or yesterday if today isn't logged yet. The longest streak is computed over all time.
-- A personal record per exercise is the heaviest set (ties broken by reps), the best e1RM, the best single-set volume and the best session volume.
-- Weekly and monthly trends bucket volume, cardio minutes, distance, sessions and active days.
-
-**CSV format** (one row per set, or per cardio entry):
-
-```
-session_id,date,type,session_name,session_notes,exercise_or_activity,muscle_group,
-set_number,reps,weight,set_volume,duration_min,distance,calories,entry_notes
-```
-
-The file is UTF-8 with a BOM, so Excel opens it correctly. On import, rows are grouped back into sessions by `session_id`. If that column is blank, rows are grouped by date, type and name, so a hand-made spreadsheet can be imported. Only `date`, `type` and `exercise_or_activity` are required.
+All three accept an optional date range.
 
 ---
 
 ## 7. Component structure
 
 ```
-App (HashRouter)
-├─ DataProvider               context: sessions, library, templates, favorites, settings
-├─ <main> routes
-│  ├─ Dashboard               Stat, ChartCard, TrendBars, TrendLine, RankBars, SessionCard
-│  ├─ LogHub                  quick-entry chips, templates grid, draft banner
-│  ├─ Editor                  StrengthCard (sets grid), cardio cards, sticky Save bar
-│  │   ├─ ExercisePicker      Sheet: search · ★Favorites · Recent · Frequent · 12 muscle tabs · custom
-│  │   └─ CardioPicker        Sheet: favorites · recent · all 24 activities · custom
-│  ├─ CalendarPage            month grid, day detail, backfill buttons
-│  ├─ History                 filters (presets/custom range/type/muscle/search), grouped list
-│  ├─ Progress                streaks, progression chart, strongest lifts, frequency, PR table
-│  └─ SettingsPage            units, CSV, backup/restore, storage, install help, erase
-└─ BottomNav
-Shared UI (components/ui.tsx): Card, Stat, Button, Chip, Sheet, Empty, PageHeader, NumberInput
+App (IconContext → DataProvider → HashRouter)
+├─ pages/  Dashboard · LogHub · Editor · CalendarPage · History · Progress
+│          ProfilePage · GoalsPage · ExercisesPage · SettingsPage
+├─ components/
+│  ├─ ui.tsx            Card (reveal), Stat, Tag, IconBadge, Button, Chip, Sheet, Field, Progress, NumberInput, PageHeader, Empty
+│  ├─ charts.tsx        ChartCard, TrendBars, TrendLine, RankBars (theme-aware palette)
+│  ├─ ExercisePicker.tsx useExerciseSearch (ranked search + filters), ExercisePicker, ExerciseAutocomplete, CardioPicker, FilterRow, FavStar
+│  ├─ SessionCard.tsx
+│  └─ BottomNav.tsx
+├─ hooks/useData.ts     single source of truth + derived library/cardio groups
+└─ lib/                 stats · goals · body · export · csv · date · theme · reveal · demo
 ```
 
 ---
 
-## 8. PWA implementation strategy
+## 8. PWA strategy
 
 | Concern | Implementation |
 |---|---|
-| Installable (Android/Chrome) | `manifest.webmanifest` generated by vite-plugin-pwa: `display: standalone`, 192/512 icons plus a maskable icon, and dark theme and background colours |
-| Installable (iPhone/Safari) | `apple-mobile-web-app-capable`, `black-translucent` status bar, a 180px `apple-touch-icon`, and `viewport-fit=cover` with safe-area padding (`pt-safe` / `pb-safe`) |
-| Offline | A Workbox service worker precaches every JS, CSS, HTML and icon file. `navigateFallback: index.html`. With HashRouter, every screen loads offline. |
-| Updates | `registerType: 'autoUpdate'`. A new version installs in the background and applies on next launch. |
-| Data durability | `navigator.storage.persist()` is requested on start-up. The Settings screen shows the protection status, and regular JSON backups are recommended. |
-| Fast loading | Code is split into `react`, `charts` and `app` chunks, about 200 KB gzipped in total and served from cache after the first visit. System fonts mean no web-font download. |
-
-**iOS note:** Safari may clear website data after 7 days of non-use for sites that are *not* installed. Installing to the Home Screen exempts the app, and so does the persistence grant. Keep backups anyway.
+| Install (Android) | Generated manifest: standalone display, 192/512 and maskable icons, theme colours |
+| Install (iPhone) | apple-touch-icon, `apple-mobile-web-app-*` meta tags, safe-area padding |
+| Offline | Workbox precaches JS, CSS, HTML, icons and Latin `woff2` fonts. Non-Latin font subsets and `.woff` duplicates are excluded. |
+| Updates | `autoUpdate`: the new version applies on next launch |
+| Durability | `navigator.storage.persist()` is requested, plus JSON backups |
+| Performance | Separate chunks for `react` and `charts`. Exporters are lazy. The theme is applied before first paint. |
 
 ---
 
-## 9. Complete source code structure
+## 9. Source tree
 
 ```
 fitness-tracker/
-├─ index.html                 PWA/iOS meta tags
-├─ package.json               scripts: dev, build, preview, typecheck, icons
-├─ vite.config.ts             React + PWA plugin, manifest, Workbox, chunking
-├─ tailwind.config.js         design tokens
-├─ public/icons/              favicon.svg + generated PNGs (npm run icons)
-├─ scripts/make-icons.mjs     renders the SVG icon to PNG sizes
-├─ docs/ARCHITECTURE.md       this file
+├─ index.html · vite.config.ts · tailwind.config.js · tsconfig.json · package.json
+├─ public/icons/            favicon.svg + PNGs (npm run icons)
+├─ scripts/make-icons.mjs
+├─ docs/ARCHITECTURE.md · docs/schema.sql
 └─ src/
-   ├─ main.tsx                mounts the app, registers the service worker
-   ├─ App.tsx                 routes and layout
-   ├─ index.css               Tailwind, safe-area and scrollbar utilities
-   ├─ types.ts                data model and muscle groups
-   ├─ data/exercises.ts       ~220-exercise library across 12 muscle groups
-   ├─ data/cardio.ts          24 cardio activities and 7 built-in templates
-   ├─ db/db.ts                IndexedDB schema, CRUD, backup/restore, persistence
-   ├─ hooks/useData.ts        DataProvider context and live reload
-   ├─ lib/date.ts             local-date helpers (no timezone bugs)
-   ├─ lib/stats.ts            all analytics (pure functions)
-   ├─ lib/csv.ts              CSV export, parser and import
-   ├─ lib/demo.ts             sample-data generator
-   ├─ components/             ui.tsx, BottomNav, SessionCard, ExercisePicker, charts
-   └─ pages/                  Dashboard, LogHub, Editor, CalendarPage, History, Progress, SettingsPage
+   ├─ main.tsx · App.tsx · index.css · types.ts
+   ├─ data/exercises.ts     muscle groups and your exercise library
+   ├─ data/cardio.ts        cardio categories and activities, templates
+   ├─ db/db.ts              IndexedDB v2 schema, repository, migration, backup
+   ├─ hooks/useData.ts
+   ├─ lib/                  stats, goals, body, export, csv, date, theme, reveal, demo
+   ├─ components/           ui, charts, ExercisePicker, SessionCard, BottomNav
+   └─ pages/                10 screens
 ```
 
 ---
 
-## 10. Future enhancement recommendations
+## 10. Scaling and future enhancements
 
-**Training features**
-- A rest timer with vibration and sound after each set, plus a set-completion checkbox for live logging.
-- Set types: warm-up, drop set, failure and AMRAP, plus RPE/RIR per set.
-- Bodyweight and assisted exercises, where volume uses bodyweight ± load.
-- Supersets and circuits (grouped exercises).
-- Progressive-overload suggestions, for example "Last time 3×8 @ 80, try 82.5".
-- Plate calculator and warm-up set generator.
-- Body metrics: bodyweight, body-fat % and measurements, with charts and progress photos stored as blobs in IndexedDB.
+**Scale.** All data is loaded into memory, which comfortably handles more than 10 years of daily training: about 4,000 sessions, a few MB, with analytics running in milliseconds. Beyond that:
 
-**Analytics**
-- A GitHub-style yearly heatmap of training days.
-- Weekly sets per muscle group compared against hypertrophy targets of 10–20 sets.
-- PR celebration toasts when a record is beaten during logging.
-- Cardio pace and speed derived from distance ÷ duration, plus heart-rate zones.
-- Export a monthly PDF report.
+- query by the `by-date` index for range screens
+- virtualise long lists
+- move analytics into a Web Worker
 
-**Data and sync (still no account)**
-- Optional one-tap backup to a user-chosen Google Drive or iCloud file via the File System Access API or share sheet.
-- Automatic weekly backup reminders.
-- Import from Strong, Hevy or Fitbod CSV exports.
-- Read Apple Health and Google Fit through a native wrapper (Capacitor) if ever needed.
+**Optional sync.** Stand up `schema.sql` on Postgres (for example Supabase). Add `updatedAt`-based last-write-wins sync per store, keeping the device as the source of truth. Ids are already UUIDs, so rows from different devices never collide.
 
-**Engineering**
-- Unit tests for `lib/stats.ts` and `lib/csv.ts` with Vitest, and Playwright smoke tests.
-- Virtualised History list once there are more than 2,000 sessions.
-- Lazy-load the charts chunk so the Log screen opens even faster.
-- A light theme toggle.
+**Feature ideas**
+
+- A rest timer, plus set types (warm-up, drop set, AMRAP) and RPE.
+- Supersets.
+- Progressive-overload suggestions and a plate calculator.
+- Weekly sets per muscle compared against hypertrophy targets.
+- A yearly heatmap.
+- A PR celebration when a record is beaten during logging.
+- Progress photos stored as blobs in IndexedDB.
+- Import from Strong or Hevy exports.
+- Apple Health and Google Fit through a Capacitor wrapper.
+- Unit tests for `lib/` with Vitest, and Playwright smoke tests in CI.

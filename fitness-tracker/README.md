@@ -1,21 +1,23 @@
-# 🏋️ Gym Diary: Personal Fitness Tracker
+# Gym Diary: Personal Fitness Tracker
 
 Gym Diary is a private gym and cardio diary for one person. It works offline, has no login, and keeps every record on your phone. Strength workouts and cardio are logged separately. You can back-date workouts you forgot to log, browse them on a calendar, and see dashboards, streaks and personal records.
 
 > Built with React, TypeScript, Tailwind CSS, IndexedDB, Recharts, and an installable PWA.
-> The full design (architecture, database schema, screens, wireframes, data model, components, PWA strategy and roadmap) is in **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
+> The full design (architecture, database design, screens, wireframes, data model, components, PWA strategy and roadmap) is in **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**, and the normalised SQL schema is in **[docs/schema.sql](docs/schema.sql)**.
 
 ## Features
 
-- **Fast logging.** Pick an exercise, then type weight × reps. "Add set" copies the previous set, and exercises pre-fill from the last time you did them.
-- **Back-dating.** Choose any past date on the Log screen, or tap a day on the Calendar and press **+ Strength** or **+ Cardio**.
-- **About 220 exercises** across 12 muscle groups, plus your own custom exercises.
-- **Cardio** with 24 activities and custom ones. Only duration is required.
-- **Quick entry.** One-tap templates (Push, Pull, Legs, Upper, Lower, Full Body, Cardio Day), favourites ★, recent and frequent exercises, and *save any workout as a template*.
-- **Dashboard.** Today's status, this week and this month, total volume, volume by muscle group, top exercises, PRs, weekly and monthly trends, and cardio minutes, activities and distance.
-- **Progress.** Streaks, days trained, weight progression per exercise, strongest lifts, muscle frequency and a personal-bests table.
-- **Data.** Export to Excel (CSV), import from CSV, full backup and restore (JSON), and erase. No cloud account is needed.
-- **Auto-saved draft.** If you close the app mid-workout, you can resume it.
+- **Fast logging.** Type a few letters to add an exercise, or browse by muscle group. "Add set" copies the previous set, and every exercise pre-fills from last time. You can record workout duration.
+- **Back-dating.** Choose any past date on the Log screen, or tap a day on the Calendar.
+- **Your exercise library.** Twelve muscle groups (with a combined Legs filter), plus custom exercises. Search, filters, favourites, and per-exercise history and records.
+- **Cardio.** Forty activities in 11 types (Running, Walking, Cycling, Swimming, HIIT, Sports and more) plus custom ones. Duration is required. Distance, calories and average heart rate are optional.
+- **Profile.** Name, height, weight, age, gender, fitness goal and activity level, with BMI and estimated maintenance calories. A body-weight log with a trend chart.
+- **Goals.** Workouts per week, cardio minutes, active days, body weight, lift targets and total volume, each with a live completion %.
+- **Dashboard.** Today, week and month, totals, current weight and weight change, average duration, and volume by week, month, day, muscle and year. PRs and weight progression. Cardio by type and activity, distance and calories trends.
+- **Progress.** Consistency streak, body-weight trend, exercise progression, strength improvement, strongest lifts, muscle frequency, personal bests and goal completion.
+- **Templates.** Push, Pull, Legs, Upper, Lower, Full Body and Cardio Day, and you can save your own.
+- **Export.** Excel (.xlsx, six sheets), a PDF report and CSV, all with an optional date range. JSON backup and restore.
+- **Dark and light themes**, or follow the phone's setting. Works on phone, tablet and desktop.
 
 ## Use it on your phone
 
@@ -35,9 +37,9 @@ The app is a website that installs like an app. It must be hosted somewhere once
 - **Android (Chrome):** open the link, tap **⋮ → Install app**.
 - **iPhone (Safari):** open the link, tap **Share → Add to Home Screen**.
 
-Want to explore first? Go to **⚙ Settings → Load sample data**, look around, then **Erase all data** when you're ready to start for real.
+Want to explore first? Go to **Settings (gear icon on Home) → Load sample data**, look around, then **Erase all data** when you're ready to start for real.
 
-> ⚠️ Your workouts live only on that phone. Use **Settings → Full backup** every few weeks and save the file to Google Drive or iCloud.
+> **Important:** your workouts live only on that phone. Use **Settings → Full backup** every few weeks and save the file to Google Drive or iCloud.
 
 ## For developers
 

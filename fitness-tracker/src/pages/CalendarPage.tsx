@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Plus, Dumbbell, HeartPulse } from 'lucide-react';
+import { CaretLeft, CaretRight, Plus, Barbell, Heartbeat } from '@phosphor-icons/react';
 import { useData } from '../hooks/useData';
 import { Card, Empty, PageHeader, Stat } from '../components/ui';
 import SessionCard, { sessionTitle } from '../components/SessionCard';
@@ -62,12 +62,12 @@ export default function CalendarPage() {
 
       <Card className="p-3">
         <div className="mb-2 flex items-center justify-between">
-          <button onClick={() => move(-1)} className="grid h-11 w-11 place-items-center rounded-xl bg-raised" aria-label="Previous month">
-            <ChevronLeft size={20} />
+          <button onClick={() => move(-1)} className="grid h-11 w-11 place-items-center rounded-btn bg-raised" aria-label="Previous month">
+            <CaretLeft size={18} weight="bold" />
           </button>
-          <div className="text-lg font-semibold">{formatMonth(`${monthPrefix}-01`)}</div>
-          <button onClick={() => move(1)} className="grid h-11 w-11 place-items-center rounded-xl bg-raised" aria-label="Next month">
-            <ChevronRight size={20} />
+          <div className="h-display text-xl">{formatMonth(`${monthPrefix}-01`)}</div>
+          <button onClick={() => move(1)} className="grid h-11 w-11 place-items-center rounded-btn bg-raised" aria-label="Next month">
+            <CaretRight size={18} weight="bold" />
           </button>
         </div>
         <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium uppercase text-muted">
@@ -91,23 +91,23 @@ export default function CalendarPage() {
                 key={k}
                 title={tip(k) || undefined}
                 onClick={() => setParams({ d: k }, { replace: true })}
-                className={`relative flex aspect-square flex-col items-center justify-center rounded-xl text-sm transition-colors ${
+                className={`relative flex aspect-square flex-col items-center justify-center rounded-btn text-sm transition-colors ${
                   isSel
-                    ? 'bg-white text-bg font-bold'
+                    ? 'bg-primary text-primary-ink font-semibold'
                     : list.length
                       ? hasS
-                        ? 'bg-accent/20 text-white font-semibold'
-                        : 'bg-cardio/20 text-white font-semibold'
+                        ? 'bg-str-soft text-str font-semibold'
+                        : 'bg-car-soft text-car font-semibold'
                       : future
-                        ? 'text-white/25'
-                        : 'text-white/80 active:bg-raised'
-                } ${isToday && !isSel ? 'ring-2 ring-accent' : ''}`}
+                        ? 'text-muted/40'
+                        : 'text-ink hover:bg-raised'
+                } ${isToday && !isSel ? 'ring-1 ring-ink/50' : ''}`}
               >
                 {Number(k.slice(8))}
                 {list.length > 0 && (
                   <span className="absolute bottom-1 flex gap-0.5">
-                    {hasS && <span className="h-1.5 w-1.5 rounded-full bg-accent" />}
-                    {hasC && <span className="h-1.5 w-1.5 rounded-full bg-cardio" />}
+                    {hasS && <span className="h-1.5 w-1.5 rounded-full bg-str" />}
+                    {hasC && <span className="h-1.5 w-1.5 rounded-full bg-car" />}
                   </span>
                 )}
               </button>
@@ -115,20 +115,20 @@ export default function CalendarPage() {
           })}
         </div>
         <div className="mt-3 flex items-center justify-center gap-4 text-xs text-muted">
-          <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-accent" /> Strength</span>
-          <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-cardio" /> Cardio</span>
-          <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full ring-2 ring-accent" /> Today</span>
+          <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-str" /> Strength</span>
+          <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-car" /> Cardio</span>
+          <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full ring-1 ring-ink/50" /> Today</span>
         </div>
       </Card>
 
       <div className="mt-3 grid grid-cols-3 gap-2">
         <Stat label="Days trained" value={`${monthSummary.days}`} sub={pastDays ? `of ${pastDays} so far` : undefined} />
-        <Stat label="Strength" tone="accent" value={monthSummary.strength} sub="sessions" />
-        <Stat label="Cardio" tone="cardio" value={monthSummary.cardio} sub={fmtMinutes(monthSummary.cardioMin)} />
+        <Stat label="Strength" tone="str" value={monthSummary.strength} sub="sessions" />
+        <Stat label="Cardio" tone="car" value={monthSummary.cardio} sub={fmtMinutes(monthSummary.cardioMin)} />
       </div>
 
       <div className="mb-2 mt-6 flex items-center justify-between px-1">
-        <h2 className="font-semibold">{formatLong(selected)}</h2>
+        <h2 className="h-display text-xl">{formatLong(selected)}</h2>
       </div>
       {daySessions.length ? (
         <div className="space-y-2">
@@ -143,11 +143,11 @@ export default function CalendarPage() {
       )}
       {selected <= today && (
         <div className="mt-3 grid grid-cols-2 gap-2">
-          <Link to={`/log/edit?kind=strength&date=${selected}`} className="flex h-12 items-center justify-center gap-2 rounded-xl border border-accent/40 bg-accent/10 font-semibold text-accent">
-            <Plus size={18} /> <Dumbbell size={18} /> Strength
+          <Link to={`/log/edit?kind=strength&date=${selected}`} className="flex h-12 items-center justify-center gap-2 rounded-btn border border-str/20 bg-str-soft font-medium text-str">
+            <Plus size={16} weight="bold" /> <Barbell size={18} weight="bold" /> Strength
           </Link>
-          <Link to={`/log/edit?kind=cardio&date=${selected}`} className="flex h-12 items-center justify-center gap-2 rounded-xl border border-cardio/40 bg-cardio/10 font-semibold text-cardio">
-            <Plus size={18} /> <HeartPulse size={18} /> Cardio
+          <Link to={`/log/edit?kind=cardio&date=${selected}`} className="flex h-12 items-center justify-center gap-2 rounded-btn border border-car/20 bg-car-soft font-medium text-car">
+            <Plus size={16} weight="bold" /> <Heartbeat size={18} weight="bold" /> Cardio
           </Link>
         </div>
       )}

@@ -1,4 +1,4 @@
-import type { DateKey, MuscleGroup, Session, SetEntry, StrengthEntry } from '../types';
+import type { DateKey, MuscleGroup, PersonalRecord, Session, SetEntry, StrengthEntry } from '../types';
 import { addDays, monthKey, startOfWeek, todayKey, fromKey } from './date';
 
 export const setVolume = (s: SetEntry) => (s.reps || 0) * (s.weight || 0);
@@ -6,6 +6,10 @@ export const entryVolume = (e: StrengthEntry) => e.sets.reduce((a, s) => a + set
 export const sessionVolume = (s: Session) => s.strength.reduce((a, e) => a + entryVolume(e), 0);
 export const sessionCardioMin = (s: Session) => s.cardio.reduce((a, c) => a + (c.durationMin || 0), 0);
 export const sessionDistance = (s: Session) => s.cardio.reduce((a, c) => a + (c.distance || 0), 0);
+export const sessionCalories = (s: Session) => s.cardio.reduce((a, c) => a + (c.calories || 0), 0);
+/** Workout length in minutes: explicit duration, else summed cardio time. Undefined if unknown. */
+export const sessionDuration = (s: Session): number | undefined =>
+  s.durationMin && s.durationMin > 0 ? s.durationMin : s.kind === 'cardio' ? sessionCardioMin(s) || undefined : undefined;
 
 /** Epley estimated one-rep max. */
 export const e1rm = (s: SetEntry) => (s.reps <= 1 ? s.weight : s.weight * (1 + s.reps / 30));
@@ -34,11 +38,16 @@ export interface PeriodSummary {
   volume: number;
   cardioMin: number;
   distance: number;
+  calories: number;
+  /** Average duration of sessions that have one (minutes), 0 if none. */
+  avgDuration: number;
 }
 
 export function summarize(list: Session[]): PeriodSummary {
   const days = new Set<string>();
-  const r: PeriodSummary = { sessions: 0, strength: 0, cardio: 0, days: 0, volume: 0, cardioMin: 0, distance: 0 };
+  const r: PeriodSummary = { sessions: 0, strength: 0, cardio: 0, days: 0, volume: 0, cardioMin: 0, distance: 0, calories: 0, avgDuration: 0 };
+  let durSum = 0;
+  let durN = 0;
   for (const s of list) {
     r.sessions++;
     if (s.kind === 'strength') r.strength++;
@@ -47,8 +56,15 @@ export function summarize(list: Session[]): PeriodSummary {
     r.volume += sessionVolume(s);
     r.cardioMin += sessionCardioMin(s);
     r.distance += sessionDistance(s);
+    r.calories += sessionCalories(s);
+    const dur = sessionDuration(s);
+    if (dur) {
+      durSum += dur;
+      durN++;
+    }
   }
   r.days = days.size;
+  r.avgDuration = durN ? durSum / durN : 0;
   return r;
 }
 
@@ -119,17 +135,8 @@ export function cardioUsage(list: Session[]) {
   return [...m.values()].sort((a, b) => b.minutes - a.minutes);
 }
 
-export interface PR {
-  exercise: string;
-  muscleGroup: MuscleGroup;
-  maxWeight: number;
-  maxWeightReps: number;
-  maxWeightDate: string;
-  best1rm: number;
-  best1rmDate: string;
-  bestSetVolume: number;
-  bestSessionVolume: number;
-}
+export type PR = PersonalRecord;
+
 
 export function personalRecords(list: Session[]): PR[] {
   const m = new Map<string, PR>();
@@ -197,6 +204,7 @@ export function weeklyTrend(list: Session[], weeks: number, weekStartsOn: 0 | 1)
       volume: 0,
       cardioMin: 0,
       distance: 0,
+      calories: 0,
       sessions: 0,
     };
   });
@@ -208,6 +216,7 @@ export function weeklyTrend(list: Session[], weeks: number, weekStartsOn: 0 | 1)
     b.volume += sessionVolume(s);
     b.cardioMin += sessionCardioMin(s);
     b.distance += sessionDistance(s);
+    b.calories += sessionCalories(s);
     b.sessions++;
   }
   return buckets.map((b) => ({ ...b, volume: Math.round(b.volume), distance: Math.round(b.distance * 10) / 10 }));
@@ -225,6 +234,7 @@ export function monthlyTrend(list: Session[], months: number) {
       volume: 0,
       cardioMin: 0,
       distance: 0,
+      calories: 0,
       sessions: 0,
       days: new Set<string>(),
     };
@@ -237,6 +247,7 @@ export function monthlyTrend(list: Session[], months: number) {
     b.volume += sessionVolume(s);
     b.cardioMin += sessionCardioMin(s);
     b.distance += sessionDistance(s);
+    b.calories += sessionCalories(s);
     b.sessions++;
     b.days.add(s.date);
   }
@@ -258,4 +269,61 @@ export function lastSetsFor(list: Session[], exercise: string): StrengthEntry['s
           best = { date: s.date, createdAt: s.createdAt, sets: e.sets };
       }
   return best ? best.sets.map((x) => ({ ...x })) : null;
+}
+
+/** Volume per calendar day for the last N days, oldest first. */
+export function dailyVolume(list: Session[], days: number) {
+  const today = todayKey();
+  const buckets = Array.from({ length: days }, (_, i) => {
+    const key = addDays(today, -(days - 1 - i));
+    return { key, label: fromKey(key).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }), volume: 0 };
+  });
+  const idx = new Map(buckets.map((b, i) => [b.key, i]));
+  for (const s of list) {
+    const i = idx.get(s.date);
+    if (i !== undefined) buckets[i].volume += sessionVolume(s);
+  }
+  return buckets.map((b) => ({ ...b, volume: Math.round(b.volume) }));
+}
+
+/** Totals per calendar year, newest first, with change vs the previous year. */
+export function annualSummary(list: Session[]) {
+  const m = new Map<string, Session[]>();
+  for (const s of list) m.set(s.date.slice(0, 4), [...(m.get(s.date.slice(0, 4)) ?? []), s]);
+  const rows = [...m.entries()]
+    .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+    .map(([year, ss]) => ({ year, ...summarize(ss) }));
+  return rows.map((r, i) => {
+    const prev = rows[i + 1];
+    return { ...r, volumeChange: prev && prev.volume ? ((r.volume - prev.volume) / prev.volume) * 100 : null };
+  });
+}
+
+/** Cardio minutes / calories grouped by activity category. */
+export function cardioByCategory(list: Session[], categoryOf: (activity: string) => string) {
+  const m = new Map<string, { category: string; minutes: number; calories: number; count: number }>();
+  for (const s of list)
+    for (const c of s.cardio) {
+      const cat = c.category ?? categoryOf(c.activity);
+      const cur = m.get(cat) ?? { category: cat, minutes: 0, calories: 0, count: 0 };
+      cur.minutes += c.durationMin || 0;
+      cur.calories += c.calories || 0;
+      cur.count++;
+      m.set(cat, cur);
+    }
+  return [...m.values()].sort((a, b) => b.minutes - a.minutes);
+}
+
+/** Per-exercise strength change: first logged e1RM vs best of the latest 3 sessions. */
+export function strengthImprovement(list: Session[]) {
+  const names = new Set(list.flatMap((s) => s.strength.map((e) => e.exercise)));
+  const rows: { exercise: string; first: number; latest: number; change: number; sessions: number }[] = [];
+  for (const name of names) {
+    const prog = exerciseProgression(list, name).filter((r) => r.e1rm > 0);
+    if (prog.length < 2) continue;
+    const first = prog[0].e1rm;
+    const latest = Math.max(...prog.slice(-3).map((r) => r.e1rm));
+    rows.push({ exercise: name, first, latest, change: ((latest - first) / first) * 100, sessions: prog.length });
+  }
+  return rows.sort((a, b) => b.sessions - a.sessions);
 }

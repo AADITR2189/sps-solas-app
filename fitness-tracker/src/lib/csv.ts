@@ -3,6 +3,7 @@ import { MUSCLE_GROUPS } from '../types';
 import { isValidKey } from './date';
 import { setVolume } from './stats';
 import { uid } from '../db/db';
+import { cardioCategory } from '../data/cardio';
 
 /**
  * Flat CSV format — one row per strength set or per cardio entry, so it opens nicely in Excel.
@@ -14,6 +15,7 @@ export const CSV_COLUMNS = [
   'type',
   'session_name',
   'session_notes',
+  'session_duration_min',
   'exercise_or_activity',
   'muscle_group',
   'set_number',
@@ -23,6 +25,8 @@ export const CSV_COLUMNS = [
   'duration_min',
   'distance',
   'calories',
+  'avg_heart_rate',
+  'cardio_type',
   'entry_notes',
 ] as const;
 
@@ -37,28 +41,28 @@ export function sessionsToCsv(sessions: Session[]): string {
   const lines = [CSV_COLUMNS.join(',')];
   const sorted = [...sessions].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.createdAt - b.createdAt));
   for (const s of sorted) {
-    const base = [s.id, s.date, s.kind, s.name ?? '', s.notes ?? ''];
+    const base = [s.id, s.date, s.kind, s.name ?? '', s.notes ?? '', s.durationMin ?? ''];
     if (s.kind === 'strength') {
       s.strength.forEach((e) => {
         const sets = e.sets.length ? e.sets : [{ reps: 0, weight: 0 }];
         sets.forEach((set, i) => {
           lines.push(
-            [...base, e.exercise, e.muscleGroup, i + 1, set.reps, set.weight, setVolume(set), '', '', '', i === 0 ? e.notes ?? '' : '']
+            [...base, e.exercise, e.muscleGroup, i + 1, set.reps, set.weight, setVolume(set), '', '', '', '', '', i === 0 ? e.notes ?? '' : '']
               .map(esc)
               .join(','),
           );
         });
       });
-      if (!s.strength.length) lines.push([...base, '', '', '', '', '', '', '', '', '', ''].map(esc).join(','));
+      if (!s.strength.length) lines.push([...base, '', '', '', '', '', '', '', '', '', '', '', ''].map(esc).join(','));
     } else {
       s.cardio.forEach((c) => {
         lines.push(
-          [...base, c.activity, '', '', '', '', '', c.durationMin, c.distance ?? '', c.calories ?? '', c.notes ?? '']
+          [...base, c.activity, '', '', '', '', '', c.durationMin, c.distance ?? '', c.calories ?? '', c.avgHeartRate ?? '', c.category ?? '', c.notes ?? '']
             .map(esc)
             .join(','),
         );
       });
-      if (!s.cardio.length) lines.push([...base, '', '', '', '', '', '', '', '', '', ''].map(esc).join(','));
+      if (!s.cardio.length) lines.push([...base, '', '', '', '', '', '', '', '', '', '', '', ''].map(esc).join(','));
     }
   }
   return lines.join('\r\n');
@@ -138,6 +142,7 @@ export function csvToSessions(text: string): CsvImportResult {
         kind,
         name: r.session_name || undefined,
         notes: r.session_notes || undefined,
+        durationMin: optNum(r.session_duration_min),
         strength: [],
         cardio: [],
         createdAt: now + line,
@@ -155,6 +160,8 @@ export function csvToSessions(text: string): CsvImportResult {
         durationMin: duration,
         distance: optNum(r.distance),
         calories: optNum(r.calories),
+        avgHeartRate: optNum(r.avg_heart_rate),
+        category: r.cardio_type || cardioCategory(r.exercise_or_activity),
         notes: r.entry_notes || undefined,
       });
     } else {

@@ -1,15 +1,17 @@
 import { Link } from 'react-router-dom';
-import { Dumbbell, HeartPulse, ChevronRight } from 'lucide-react';
+import { Barbell, Heartbeat, CaretRight } from '@phosphor-icons/react';
 import type { Session } from '../types';
 import { useData } from '../hooks/useData';
-import { fmtMinutes, fmtNum, sessionCardioMin, sessionDistance, sessionVolume } from '../lib/stats';
+import { fmtMinutes, fmtNum, sessionCardioMin, sessionDistance, sessionDuration, sessionVolume } from '../lib/stats';
 import { relativeLabel } from '../lib/date';
+import { groupName } from '../data/exercises';
+import { IconBadge } from './ui';
 
 export function sessionTitle(s: Session) {
   if (s.name) return s.name;
   if (s.kind === 'cardio') return s.cardio.map((c) => c.activity).join(', ') || 'Cardio';
   const groups = [...new Set(s.strength.map((e) => e.muscleGroup))];
-  return groups.length ? groups.map((g) => g[0] + g.slice(1).toLowerCase()).join(' · ') : 'Strength';
+  return groups.length ? groups.map(groupName).join(' · ') : 'Strength';
 }
 
 export default function SessionCard({ s, showDate = true }: { s: Session; showDate?: boolean }) {
@@ -17,20 +19,15 @@ export default function SessionCard({ s, showDate = true }: { s: Session; showDa
   const isCardio = s.kind === 'cardio';
   const sets = s.strength.reduce((a, e) => a + e.sets.length, 0);
   const dist = sessionDistance(s);
+  const dur = sessionDuration(s);
   return (
     <Link
       to={`/log/edit?id=${s.id}`}
-      className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-3 active:bg-raised"
+      className="flex min-w-0 items-center gap-3 rounded-card border border-line bg-surface p-3.5 transition-shadow hover:shadow-lift active:scale-[0.995]"
     >
-      <div
-        className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${
-          isCardio ? 'bg-cardio/15 text-cardio' : 'bg-accent/15 text-accent'
-        }`}
-      >
-        {isCardio ? <HeartPulse size={22} /> : <Dumbbell size={22} />}
-      </div>
+      <IconBadge tone={isCardio ? 'car' : 'str'}>{isCardio ? <Heartbeat size={20} weight="bold" /> : <Barbell size={20} weight="bold" />}</IconBadge>
       <div className="min-w-0 flex-1">
-        <div className="truncate font-semibold">{sessionTitle(s)}</div>
+        <div className="truncate font-medium">{sessionTitle(s)}</div>
         <div className="truncate text-sm text-muted">
           {showDate && <>{relativeLabel(s.date)} · </>}
           {isCardio ? (
@@ -41,11 +38,12 @@ export default function SessionCard({ s, showDate = true }: { s: Session; showDa
           ) : (
             <>
               {s.strength.length} exercises · {sets} sets · {fmtNum(sessionVolume(s))} {settings.weightUnit}
+              {dur ? ` · ${fmtMinutes(dur)}` : ''}
             </>
           )}
         </div>
       </div>
-      <ChevronRight size={18} className="shrink-0 text-muted" />
+      <CaretRight size={16} weight="bold" className="shrink-0 text-muted" />
     </Link>
   );
 }
