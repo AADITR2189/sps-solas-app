@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { GearSix, UserCircle, CheckCircle, Circle, Barbell, Heartbeat, Plus, Trophy, Target, Drop, CaretRight } from '@phosphor-icons/react';
+import { GearSix, UserCircle, CheckCircle, Circle, Barbell, Heartbeat, Plus, Trophy, Target, Drop, CaretRight, Fire } from '@phosphor-icons/react';
 import { useData } from '../hooks/useData';
 import { Card, Chip, Empty, IconButton, PageHeader, Progress, SectionTitle, Stat } from '../components/ui';
 import SessionCard from '../components/SessionCard';
@@ -26,6 +26,8 @@ import { currentWeight, weightChange } from '../lib/body';
 import { goalProgress, overallGoalCompletion } from '../lib/goals';
 import { groupName } from '../data/exercises';
 import WaterRing from '../components/WaterRing';
+import GoalRing from '../components/GoalRing';
+import CountUp from '../components/CountUp';
 import { useHydration } from '../hooks/useHydration';
 import { saveWaterLog, uid } from '../db/db';
 import { fmtVolume } from '../lib/water';
@@ -71,6 +73,7 @@ export default function Dashboard() {
       cardioTypes: cardioByCategory(sessions, categoryOf),
       goalPct: overallGoalCompletion(active.map((g) => goalProgress(g, sessions, measurements, profile, settings, water))),
       goalCount: active.length,
+      weekGoal: [...active].sort((a, b) => b.createdAt - a.createdAt).find((g) => g.type === 'weeklySessions')?.target,
     };
   }, [sessions, today, settings, records, goals, measurements, profile, categoryOf, water]);
 
@@ -140,17 +143,31 @@ export default function Dashboard() {
         )}
       </Card>
 
-      {/* Water */}
-      <WaterCard />
+      {/* Weekly workout goal + water */}
+      <div className="mt-2 grid gap-2 md:grid-cols-2">
+        <WeekRingCard done={d.week.sessions} target={d.weekGoal ?? 4} hasGoal={d.weekGoal !== undefined} />
+        <WaterCard />
+      </div>
 
       {/* Overview */}
       <SectionTitle>Overview</SectionTitle>
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         <Stat index={0} label="Total workouts" value={d.all.sessions} sub={`${d.all.strength} strength · ${d.all.cardio} cardio`} />
-        <Stat index={1} label="Streak" tone="gold" value={`${d.streak.current}d`} sub={`Longest ${d.streak.longest} days`} />
+        <Stat
+          index={1}
+          label="Streak"
+          tone="gold"
+          value={
+            <span className="inline-flex items-center gap-1">
+              {d.streak.current > 0 && <Fire size={24} weight="fill" className="anim-flicker" />}
+              <CountUp value={d.streak.current} format={(n) => `${Math.round(n)}d`} />
+            </span>
+          }
+          sub={`Longest ${d.streak.longest} days`}
+        />
         <Stat index={2} label="Days this month" value={d.month.days} sub={`${d.month.sessions} sessions`} />
-        <Stat index={3} label="Avg duration" value={d.all.avgDuration ? fmtMinutes(d.all.avgDuration) : '—'} sub="per workout" />
-        <Stat index={4} label="Total volume" tone="str" value={fmtNum(d.all.volume)} sub={`${wu} lifted`} />
+        <Stat index={3} label="Avg duration" value={d.all.avgDuration ? <CountUp value={d.all.avgDuration} format={fmtMinutes} /> : '—'} sub="per workout" />
+        <Stat index={4} label="Total volume" tone="str" value={<CountUp value={d.all.volume} format={(n) => fmtNum(n)} />} sub={`${wu} lifted`} />
         <Stat
           index={5}
           label="Current weight"
@@ -165,7 +182,7 @@ export default function Dashboard() {
           sub={wc !== undefined ? `${wu} since start` : 'Log two weigh-ins'}
         />
         <Link to="/goals" className="contents">
-          <Stat index={7} label="Goals" tone="str" value={d.goalPct !== undefined ? `${d.goalPct}%` : '—'} sub={d.goalCount ? `${d.goalCount} active goals` : 'Set a goal'} />
+          <Stat index={7} label="Goals" tone="str" value={d.goalPct !== undefined ? <CountUp value={d.goalPct} format={(n) => `${Math.round(n)}%`} /> : '—'} sub={d.goalCount ? `${d.goalCount} active goals` : 'Set a goal'} />
         </Link>
       </div>
 
@@ -173,16 +190,16 @@ export default function Dashboard() {
         <Card index={1}>
           <div className="eyebrow">This week</div>
           <div className="num mt-3 grid grid-cols-3 gap-3">
-            <Mini label="Sessions" value={d.week.sessions} sub={`${d.week.days} days`} />
-            <Mini label="Volume" value={fmtNum(d.week.volume)} sub={wu} tone="text-str" />
+            <Mini label="Sessions" value={<CountUp value={d.week.sessions} />} sub={`${d.week.days} days`} />
+            <Mini label="Volume" value={<CountUp value={d.week.volume} format={(n) => fmtNum(n)} />} sub={wu} tone="text-str" />
             <Mini label="Cardio" value={fmtMinutes(d.week.cardioMin)} sub={d.week.distance ? `${fmtNum(d.week.distance, 1)} ${du}` : 'time'} tone="text-car" />
           </div>
         </Card>
         <Card index={2}>
           <div className="eyebrow">This month</div>
           <div className="num mt-3 grid grid-cols-3 gap-3">
-            <Mini label="Sessions" value={d.month.sessions} sub={`${d.month.strength} str · ${d.month.cardio} car`} />
-            <Mini label="Volume" value={fmtNum(d.month.volume)} sub={wu} tone="text-str" />
+            <Mini label="Sessions" value={<CountUp value={d.month.sessions} />} sub={`${d.month.strength} str · ${d.month.cardio} car`} />
+            <Mini label="Volume" value={<CountUp value={d.month.volume} format={(n) => fmtNum(n)} />} sub={wu} tone="text-str" />
             <Mini label="Cardio" value={fmtMinutes(d.month.cardioMin)} sub={d.month.calories ? `${fmtNum(d.month.calories)} kcal` : 'time'} tone="text-car" />
           </div>
         </Card>
@@ -312,7 +329,7 @@ export default function Dashboard() {
             </span>
           </SectionTitle>
           <div className="grid grid-cols-3 gap-2">
-            <Stat index={0} label="Total" tone="car" value={fmtMinutes(d.all.cardioMin)} sub={`${d.all.cardio} sessions`} />
+            <Stat index={0} label="Total" tone="car" value={<CountUp value={d.all.cardioMin} format={fmtMinutes} />} sub={`${d.all.cardio} sessions`} />
             <Stat index={1} label="This week" value={fmtMinutes(d.week.cardioMin)} />
             <Stat index={2} label="This month" value={fmtMinutes(d.month.cardioMin)} />
           </div>
@@ -393,7 +410,7 @@ function WaterCard() {
   const [flash, setFlash] = useState(false);
   const quick = h.sizes[0];
   return (
-    <Card className="mt-2">
+    <Card>
       <div className="flex items-center gap-4">
         <WaterRing ml={h.total} target={h.target} size={96} />
         <div className="min-w-0 flex-1">
@@ -419,6 +436,34 @@ function WaterCard() {
               More <CaretRight size={12} weight="bold" />
             </Link>
           </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+/** Home-screen ring: workouts done this week vs the weekly goal (default 4 when no goal is set). */
+function WeekRingCard({ done, target, hasGoal }: { done: number; target: number; hasGoal: boolean }) {
+  const pct = target ? Math.round((done / target) * 100) : 0;
+  const met = done >= target;
+  return (
+    <Card>
+      <div className="flex items-center gap-4">
+        <GoalRing pct={pct} size={96} tone={met ? 'gold' : 'str'} label={`${done} of ${target} workouts this week`}>
+          <div className="leading-none">
+            <div className="h-display text-[26px]">
+              <CountUp value={done} />
+              <span className="text-base text-muted">/{target}</span>
+            </div>
+          </div>
+        </GoalRing>
+        <div className="min-w-0 flex-1">
+          <div className="eyebrow">Workouts this week</div>
+          <div className="mt-1 font-medium">{met ? 'Weekly goal reached' : `${target - done} more to hit your goal`}</div>
+          <div className="text-xs text-muted">{hasGoal ? 'From your weekly goal' : 'Default goal of 4 a week'}</div>
+          <Link to="/goals" className="mt-2 inline-flex h-9 items-center gap-1 rounded-btn border border-line px-3 text-sm">
+            {hasGoal ? 'Goals' : 'Set goal'} <CaretRight size={12} weight="bold" />
+          </Link>
         </div>
       </div>
     </Card>

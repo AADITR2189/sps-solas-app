@@ -81,13 +81,17 @@ export default function CalendarPage() {
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-1">
-          {cells.map((k, i) => {
+        {/* Keyed by month so workout days re-animate in when you change month. */}
+        <div key={monthPrefix} className="grid grid-cols-7 gap-1">
+          {(() => {
+            let litIndex = 0;
+            return cells.map((k, i) => {
             if (!k) return <div key={i} />;
             const list = byDate.get(k) ?? [];
             const hasS = list.some((s) => s.kind === 'strength');
             const hasC = list.some((s) => s.kind === 'cardio');
             const hasW = waterMet(k);
+            const order = list.length || hasW ? litIndex++ : -1;
             const isSel = k === selected;
             const isToday = k === today;
             const future = k > today;
@@ -95,8 +99,9 @@ export default function CalendarPage() {
               <button
                 key={k}
                 title={tip(k) || undefined}
+                style={order >= 0 ? { animationDelay: `${order * 35}ms` } : undefined}
                 onClick={() => setParams({ d: k }, { replace: true })}
-                className={`relative flex aspect-square flex-col items-center justify-center rounded-btn text-sm transition-colors ${
+                className={`relative flex aspect-square flex-col items-center justify-center rounded-btn text-sm transition-colors ${order >= 0 ? 'anim-day' : ''} ${
                   isSel
                     ? 'bg-primary text-primary-ink font-semibold'
                     : list.length
@@ -118,7 +123,8 @@ export default function CalendarPage() {
                 )}
               </button>
             );
-          })}
+            });
+          })()}
         </div>
         <div className="mt-3 flex items-center justify-center gap-4 text-xs text-muted">
           <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-str" /> Strength</span>

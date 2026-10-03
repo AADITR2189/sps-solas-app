@@ -5,6 +5,7 @@ import { useData } from '../hooks/useData';
 import { Card, Chip, Empty, PageHeader, Progress as Bar, SectionTitle, Stat, inputCls } from '../components/ui';
 import { ChartCard, RankBars, TrendBars, TrendLine, WaterBars } from '../components/charts';
 import WaterRing from '../components/WaterRing';
+import CountUp from '../components/CountUp';
 import { useHydration } from '../hooks/useHydration';
 import { averageDaily, daysMet, fmtVolume, waterSeries, waterStreak } from '../lib/water';
 import { exerciseProgression, exerciseUsage, fmtNum, inRange, monthlyTrend, streaks, strengthImprovement, summarize, volumeByMuscle } from '../lib/stats';
@@ -71,8 +72,8 @@ export default function Progress() {
           tone="gold"
           value={
             <span className="inline-flex items-center gap-1.5">
-              <Fire size={22} weight="fill" />
-              {st.current}d
+              <Fire size={22} weight="fill" className={st.current > 0 ? 'anim-flicker' : ''} />
+              <CountUp value={st.current} format={(n) => `${Math.round(n)}d`} />
             </span>
           }
           sub={`Longest ${st.longest} days`}

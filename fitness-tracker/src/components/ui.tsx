@@ -2,6 +2,7 @@ import { useEffect, type ReactNode, type ButtonHTMLAttributes, type CSSPropertie
 import { Link } from 'react-router-dom';
 import { X } from '@phosphor-icons/react';
 import { useReveal } from '../lib/reveal';
+import CountUp from './CountUp';
 
 export type Tone = 'default' | 'str' | 'car' | 'gold' | 'danger' | 'wat';
 
@@ -63,7 +64,7 @@ export function Stat({
   return (
     <Card index={index} className="p-4">
       <div className="eyebrow leading-tight">{label}</div>
-      <div className={`h-display num mt-2 text-[34px] ${toneText[tone]}`}>{value}</div>
+      <div className={`h-display num mt-2 text-[34px] ${toneText[tone]}`}>{typeof value === 'number' ? <CountUp value={value} /> : value}</div>
       {sub !== undefined && <div className="mt-1 text-xs leading-snug text-muted">{sub}</div>}
     </Card>
   );

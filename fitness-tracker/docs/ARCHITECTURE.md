@@ -107,7 +107,17 @@ The primary colours are **teal `#004741` on sand `#F0EDE4`** (light) and **yello
 - **Type ("Athletic"):** Barlow Condensed Bold for headings and big numbers. Page, section and chart titles are uppercase, like a scoreboard. Barlow for UI text (line-height 1.6). Geist Mono for small uppercase labels and metadata. All fonts are bundled locally, so they work offline.
 - **Icons:** Phosphor, in bold weight, or fill for the active state.
 - **Shape:** cards use a 12px radius, buttons and inputs 6px, and tags are pills.
-- **Motion:** cards fade and rise in on scroll (IntersectionObserver, 600ms, staggered by 80ms), buttons scale to 0.98 when pressed, and a single slow ambient light drifts on a fixed layer. All of it is switched off under `prefers-reduced-motion`.
+- **Motion:** cards fade and rise in on scroll (IntersectionObserver, 600ms, staggered by 80ms), buttons scale to 0.98 when pressed, and a single slow ambient light drifts on a fixed layer. Workout animations (`lib/anim.ts`, keyframes in `index.css`):
+  - Completed sets flash green and show a tick.
+  - New sets and exercises slide in.
+  - The save bar's sets and volume count up live.
+  - A gold **New PR** badge pops in when a set beats your record.
+  - Saving shows a drawn check mark with the session's stats, plus a sparkle burst for new PRs.
+  - Home has a weekly workout-goal ring.
+  - Big numbers count up when they come into view, and charts grow in when first scrolled to.
+  - The streak flame flickers while a streak is alive.
+  - Calendar workout days pop in one after another.
+  - Everything is switched off under `prefers-reduced-motion`.
 - **Theme:** Dark (default), Light or System. The choice is applied before first paint by an inline script, so there is no flash of the wrong theme.
 
 ---

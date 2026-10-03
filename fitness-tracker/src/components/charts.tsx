@@ -3,6 +3,7 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Toolti
 import { fmtNum } from '../lib/stats';
 import { usePalette, type Palette } from '../lib/theme';
 import { Card } from './ui';
+import { useInView } from '../lib/anim';
 
 // Each chart is single-series in one hue (strength = green, cardio = blue, ...), so identity
 // never depends on colour alone: the chart title names the series and the axis names categories.
@@ -41,6 +42,8 @@ export function ChartCard({
   right?: ReactNode;
   index?: number;
 }) {
+  // Mount the chart only when it scrolls into view, so its grow-in animation is actually seen.
+  const [ref, inView] = useInView<HTMLDivElement>();
   return (
     <Card index={index}>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
@@ -50,10 +53,15 @@ export function ChartCard({
         </div>
         {right}
       </div>
-      {children}
+      <div ref={ref} className="min-h-[120px]">
+        {inView ? children : null}
+      </div>
     </Card>
   );
 }
+
+/** Shared grow-in timing for bars and lines. */
+const GROW = { isAnimationActive: true, animationDuration: 900, animationEasing: 'ease-out' as const };
 
 export function TrendBars({
   data,
@@ -77,7 +85,7 @@ export function TrendBars({
         <XAxis dataKey="label" tick={{ fill: p.muted, fontSize: 11 }} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={12} />
         <YAxis tick={{ fill: p.muted, fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={axisNum} width={44} />
         <Tooltip {...tip} formatter={(v) => [`${fmtNum(Number(v), 1)} ${unit}`, '']} separator="" />
-        <Bar dataKey={dataKey} fill={color(p, series)} radius={[4, 4, 0, 0]} maxBarSize={26} />
+        <Bar dataKey={dataKey} fill={color(p, series)} radius={[4, 4, 0, 0]} maxBarSize={26} {...GROW} />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -113,6 +121,8 @@ export function TrendLine({
           dataKey={dataKey}
           stroke={c}
           strokeWidth={2}
+          {...GROW}
+          animationDuration={1200}
           dot={{ r: 4, fill: c, stroke: p.surface, strokeWidth: 2 }}
           activeDot={{ r: 6, stroke: p.surface, strokeWidth: 2 }}
         />
@@ -132,7 +142,7 @@ export function RankBars({ data, series, unit }: { data: { name: string; value: 
         <XAxis type="number" hide />
         <YAxis type="category" dataKey="name" width={112} tick={{ fill: p.ink, fontSize: 12 }} tickLine={false} axisLine={false} />
         <Tooltip {...tip} formatter={(v) => [`${fmtNum(Number(v), 1)} ${unit}`, '']} separator="" />
-        <Bar dataKey="value" radius={[0, 4, 4, 0]} label={{ position: 'right', fill: p.muted, fontSize: 11, formatter: (v: unknown) => fmtNum(Number(v)) }}>
+        <Bar dataKey="value" radius={[0, 4, 4, 0]} {...GROW} label={{ position: 'right', fill: p.muted, fontSize: 11, formatter: (v: unknown) => fmtNum(Number(v)) }}>
           {data.map((d) => (
             <Cell key={d.name} fill={color(p, series)} />
           ))}
@@ -168,12 +178,12 @@ export function WaterBars({
           formatter={(v, name) => [fmt(Number(v)), name === 'target' ? 'Target' : 'Drank']}
           separator=": "
         />
-        <Bar dataKey="ml" name="ml" radius={[4, 4, 0, 0]} maxBarSize={26}>
+        <Bar dataKey="ml" name="ml" radius={[4, 4, 0, 0]} maxBarSize={26} {...GROW}>
           {data.map((d, i) => (
             <Cell key={i} fill={p.water} fillOpacity={d.met ? 1 : 0.45} />
           ))}
         </Bar>
-        <Line type="stepAfter" dataKey="target" name="target" stroke={p.ink} strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} />
+        <Line type="stepAfter" dataKey="target" name="target" stroke={p.ink} strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} isAnimationActive={false} />
       </ComposedChart>
     </ResponsiveContainer>
   );
