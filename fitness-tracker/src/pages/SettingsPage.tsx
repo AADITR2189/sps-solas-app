@@ -24,6 +24,7 @@ import {
   exportBackup,
   importBackup,
   putSessions,
+  putWaterLogs,
   requestPersistentStorage,
   saveMeasurement,
   saveSettings,
@@ -32,7 +33,7 @@ import {
 } from '../db/db';
 import { csvToSessions, downloadText, sessionsToCsv } from '../lib/csv';
 import { addDays, todayKey } from '../lib/date';
-import { makeDemoSessions } from '../lib/demo';
+import { makeDemoSessions, makeDemoWater } from '../lib/demo';
 import { groupName } from '../data/exercises';
 import type { BackupFile, ThemePref } from '../types';
 
@@ -79,6 +80,7 @@ export default function SettingsPage() {
     goals: data.goals,
     profile: data.profile,
     settings: data.settings,
+    water: data.water,
   });
 
   async function onImportCsv(file: File) {
@@ -174,6 +176,14 @@ export default function SettingsPage() {
             </Chip>
           ))}
         </Row>
+        <Row label="Water">
+          <Chip active={settings.volumeUnit === 'ml'} onClick={() => saveSettings({ ...settings, volumeUnit: 'ml' })}>
+            ml / L
+          </Chip>
+          <Chip active={settings.volumeUnit === 'oz'} onClick={() => saveSettings({ ...settings, volumeUnit: 'oz' })}>
+            fl oz
+          </Chip>
+        </Row>
         <Row label="Week starts">
           <Chip active={settings.weekStartsOn === 1} onClick={() => saveSettings({ ...settings, weekStartsOn: 1 })}>
             Mon
@@ -182,7 +192,10 @@ export default function SettingsPage() {
             Sun
           </Chip>
         </Row>
-        <p className="text-xs text-muted">Units are labels only. Numbers are stored exactly as you type them.</p>
+        <p className="text-xs text-muted">
+          Weight and distance units are labels only: numbers are stored exactly as you type them. Water is stored in ml and converted for display, so
+          switching ml / fl oz is safe at any time.
+        </p>
       </Card>
 
       <SectionTitle>Export</SectionTitle>
@@ -340,6 +353,7 @@ export default function SettingsPage() {
             className="w-full justify-start"
             onClick={async () => {
               await putSessions(makeDemoSessions());
+              await putWaterLogs(makeDemoWater());
               const start = 82;
               for (let i = 10; i >= 0; i--)
                 await saveMeasurement({ id: uid(), date: addDays(todayKey(), -i * 7), weight: Math.round((start - (10 - i) * 0.35) * 10) / 10, createdAt: Date.now() + i });
@@ -353,7 +367,7 @@ export default function SettingsPage() {
           variant="danger"
           className="w-full justify-start"
           onClick={async () => {
-            if (!confirm('Erase all workouts, profile, goals, templates and settings from this device?')) return;
+            if (!confirm('Erase all workouts, water logs, profile, goals, templates and settings from this device?')) return;
             if (!confirm('Really erase everything? Make a backup first if unsure.')) return;
             await wipeAll();
             flash('All data erased.');

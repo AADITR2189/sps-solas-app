@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, Cell } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, Cell, ComposedChart } from 'recharts';
 import { fmtNum } from '../lib/stats';
 import { usePalette, type Palette } from '../lib/theme';
 import { Card } from './ui';
 
 // Each chart is single-series in one hue (strength = green, cardio = blue, ...), so identity
 // never depends on colour alone: the chart title names the series and the axis names categories.
-export type Series = 'strength' | 'cardio' | 'gold' | 'rose' | 'ink';
+export type Series = 'strength' | 'cardio' | 'gold' | 'rose' | 'ink' | 'water';
 const color = (p: Palette, s: Series) => (s === 'ink' ? p.ink : p[s]);
 /** Short axis labels so ticks never clip: 9000 -> 9k, 13500 -> 13.5k. */
 const axisNum = (v: number) => (Math.abs(v) >= 1000 ? `${+(v / 1000).toFixed(1)}k` : `${+v.toFixed(1)}`);
@@ -138,6 +138,43 @@ export function RankBars({ data, series, unit }: { data: { name: string; value: 
           ))}
         </Bar>
       </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+/**
+ * Daily water bars against that day's target (dashed line). Days that met the target are
+ * full-strength; days below it are lighter, and the tooltip spells out both numbers.
+ */
+export function WaterBars({
+  data,
+  fmt,
+  height = 200,
+}: {
+  data: { label: string; ml: number; target: number; met: boolean }[];
+  fmt: (ml: number) => string;
+  height?: number;
+}) {
+  const p = usePalette();
+  const tip = useTooltip();
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <ComposedChart data={data} margin={{ top: 8, right: 4, left: -12, bottom: 0 }} barCategoryGap="22%">
+        <CartesianGrid vertical={false} stroke={p.line} />
+        <XAxis dataKey="label" tick={{ fill: p.muted, fontSize: 11 }} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={10} />
+        <YAxis tick={{ fill: p.muted, fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${+(v / 1000).toFixed(1)}L`} width={44} />
+        <Tooltip
+          {...tip}
+          formatter={(v, name) => [fmt(Number(v)), name === 'target' ? 'Target' : 'Drank']}
+          separator=": "
+        />
+        <Bar dataKey="ml" name="ml" radius={[4, 4, 0, 0]} maxBarSize={26}>
+          {data.map((d, i) => (
+            <Cell key={i} fill={p.water} fillOpacity={d.met ? 1 : 0.45} />
+          ))}
+        </Bar>
+        <Line type="stepAfter" dataKey="target" name="target" stroke={p.ink} strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} />
+      </ComposedChart>
     </ResponsiveContainer>
   );
 }

@@ -1,4 +1,4 @@
-import type { Session, StrengthEntry, MuscleGroup } from '../types';
+import type { Session, StrengthEntry, MuscleGroup, WaterLog } from '../types';
 import { addDays, todayKey, fromKey } from './date';
 import { uid } from '../db/db';
 import { cardioCategory } from '../data/cardio';
@@ -46,6 +46,26 @@ export function makeDemoSessions(): Session[] {
         return { id: uid(), exercise, muscleGroup, sets: [ { reps: 10, weight: w - 5 > 0 ? w - 5 : w }, { reps: 8, weight: w }, { reps: 8, weight: w }, { reps: 6, weight: w + 2.5 } ] };
       });
       out.push({ id: uid(), date, kind: 'strength', name: p.name, durationMin: 50 + Math.round(Math.random() * 25), strength, cardio: [], createdAt: now, updatedAt: now });
+    }
+  }
+  return out;
+}
+
+/** ~5 weeks of sample water logs (a few glasses and bottles per day, some days short of target). */
+export function makeDemoWater(): WaterLog[] {
+  const out: WaterLog[] = [];
+  const today = todayKey();
+  for (let back = 34; back >= 0; back--) {
+    const date = addDays(today, -back);
+    const base = fromKey(date).getTime();
+    const drinks = back === 0 ? 4 : 6 + Math.floor(Math.random() * 5);
+    for (let i = 0; i < drinks; i++) {
+      out.push({
+        id: uid(),
+        date,
+        amountMl: Math.random() < 0.45 ? 250 : Math.random() < 0.85 ? 500 : 750,
+        loggedAt: base + (8 + i * 1.6) * 3600_000,
+      });
     }
   }
   return out;

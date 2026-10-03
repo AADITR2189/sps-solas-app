@@ -14,6 +14,7 @@ import type {
   Session,
   Settings,
   Template,
+  WaterLog,
 } from '../types';
 import { DEFAULT_SETTINGS, MUSCLE_GROUPS } from '../types';
 import { applyTheme } from '../lib/theme';
@@ -30,6 +31,7 @@ interface DataState {
   measurements: BodyMeasurement[];
   goals: FitnessGoal[];
   records: PersonalRecord[];
+  water: WaterLog[];
 }
 
 interface DataCtx extends DataState {
@@ -60,12 +62,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
     measurements: [],
     goals: [],
     records: [],
+    water: [],
   });
 
   useEffect(() => {
     let alive = true;
     const load = async () => {
-      const [sessions, exercises, customCardio, favorites, userTemplates, settings, profile, measurements, goals, records] =
+      const [sessions, exercises, customCardio, favorites, userTemplates, settings, profile, measurements, goals, records, water] =
         await Promise.all([
           db.getAllSessions(),
           db.getExercises(),
@@ -77,9 +80,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
           db.getMeasurements(),
           db.getGoals(),
           db.getPersonalRecords(),
+          db.getWaterLogs(),
         ]);
       if (alive)
-        setState({ ready: true, sessions, exercises, customCardio, favorites, userTemplates, settings, profile, measurements, goals, records });
+        setState({ ready: true, sessions, exercises, customCardio, favorites, userTemplates, settings, profile, measurements, goals, records, water });
     };
     load();
     db.requestPersistentStorage();

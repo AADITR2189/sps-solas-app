@@ -1,9 +1,12 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Fire, Trophy, CalendarCheck, ChartLineUp, Medal, Target, Scales, ArrowUpRight, ArrowDownRight } from '@phosphor-icons/react';
+import { Drop, Fire, Trophy, CalendarCheck, ChartLineUp, Medal, Target, Scales, ArrowUpRight, ArrowDownRight } from '@phosphor-icons/react';
 import { useData } from '../hooks/useData';
 import { Card, Chip, Empty, PageHeader, Progress as Bar, SectionTitle, Stat, inputCls } from '../components/ui';
-import { ChartCard, RankBars, TrendBars, TrendLine } from '../components/charts';
+import { ChartCard, RankBars, TrendBars, TrendLine, WaterBars } from '../components/charts';
+import WaterRing from '../components/WaterRing';
+import { useHydration } from '../hooks/useHydration';
+import { averageDaily, daysMet, fmtVolume, waterSeries, waterStreak } from '../lib/water';
 import { exerciseProgression, exerciseUsage, fmtNum, inRange, monthlyTrend, streaks, strengthImprovement, summarize, volumeByMuscle } from '../lib/stats';
 import { addDays, formatShort, startOfMonth, todayKey, fromKey } from '../lib/date';
 import { currentWeight, weightChange } from '../lib/body';
@@ -13,7 +16,7 @@ import { groupName } from '../data/exercises';
 type Metric = 'maxWeight' | 'e1rm' | 'volume';
 
 export default function Progress() {
-  const { sessions, settings, records, measurements, profile, goals } = useData();
+  const { sessions, settings, records, measurements, profile, goals, water } = useData();
   const wu = settings.weightUnit;
   const today = todayKey();
   const [freqRange, setFreqRange] = useState<'30' | 'all'>('30');
@@ -40,14 +43,14 @@ export default function Progress() {
   const cw = currentWeight(measurements, profile);
   const wc30 = weightChange(measurements, profile, 30);
   const active = goals.filter((g) => !g.archived);
-  const goalRows = active.map((g) => ({ g, p: goalProgress(g, sessions, measurements, profile, settings) }));
+  const goalRows = active.map((g) => ({ g, p: goalProgress(g, sessions, measurements, profile, settings, water) }));
   const goalPct = overallGoalCompletion(goalRows.map((r) => r.p));
 
   const first = prog[0]?.[metric] ?? 0;
   const last = prog[prog.length - 1]?.[metric] ?? 0;
   const change = first ? ((last - first) / first) * 100 : 0;
 
-  if (!sessions.length && !measurements.length)
+  if (!sessions.length && !measurements.length && !water.length)
     return (
       <div>
         <PageHeader title="Progress" />
@@ -143,6 +146,8 @@ export default function Progress() {
           </Card>
         </>
       )}
+
+      <HydrationProgress />
 
       <SectionTitle>Exercise progression</SectionTitle>
       {usage.length ? (
@@ -305,5 +310,74 @@ export default function Progress() {
         </>
       )}
     </div>
+  );
+}
+
+function HydrationProgress() {
+  const { water, sessions, profile, settings } = useData();
+  const unit = settings.volumeUnit;
+  const today = useHydration();
+  const [range, setRange] = useState<7 | 30>(7);
+  const todayK = todayKey();
+  const series = useMemo(() => waterSeries(range, water, today.base, sessions, profile), [range, water, today.base, sessions, profile]);
+  const streak = useMemo(() => waterStreak(water, today.base, sessions, profile), [water, today.base, sessions, profile]);
+  const metMonth = useMemo(() => daysMet(startOfMonth(todayK), todayK, water, today.base, sessions, profile), [water, today.base, sessions, profile, todayK]);
+  const avg = averageDaily(30, water);
+  const dayOfMonth = fromKey(todayK).getDate();
+
+  return (
+    <>
+      <SectionTitle
+        action={
+          <Link to="/water" className="text-sm text-muted underline-offset-4 hover:underline">
+            Log water
+          </Link>
+        }
+      >
+        <span className="inline-flex items-center gap-1.5 text-wat">
+          <Drop size={12} weight="fill" /> Hydration
+        </span>
+      </SectionTitle>
+      <div className="grid gap-2 md:grid-cols-[auto_1fr]">
+        <Card className="flex items-center gap-4">
+          <WaterRing ml={today.total} target={today.target} size={110} />
+          <div>
+            <div className="eyebrow">Today</div>
+            <div className="num mt-1 text-sm">
+              <span className="font-medium text-wat">{fmtVolume(today.total, unit)}</span>
+              <span className="text-muted"> of {fmtVolume(today.target, unit)}</span>
+            </div>
+          </div>
+        </Card>
+        <div className="grid grid-cols-3 gap-2">
+          <Stat index={0} label="Water streak" tone="wat" value={`${streak}d`} sub="target met" />
+          <Stat index={1} label="Target met" value={metMonth} sub={`of ${dayOfMonth} days`} />
+          <Stat
+            index={2}
+            label="Daily avg"
+            value={avg ? (unit === 'oz' ? Math.round(avg / 29.5735) : (avg / 1000).toFixed(2)) : '—'}
+            sub={`${unit === 'oz' ? 'fl oz' : 'litres'} a day, 30 days`}
+          />
+        </div>
+      </div>
+      <div className="mt-2">
+        <ChartCard
+          title="Daily water"
+          sub="Bars: water drunk. Dashed line: that day's target"
+          right={
+            <div className="flex gap-1">
+              <Chip active={range === 7} onClick={() => setRange(7)}>
+                7 days
+              </Chip>
+              <Chip active={range === 30} onClick={() => setRange(30)}>
+                30 days
+              </Chip>
+            </div>
+          }
+        >
+          <WaterBars data={series} fmt={(ml) => fmtVolume(ml, unit)} />
+        </ChartCard>
+      </div>
+    </>
   );
 }

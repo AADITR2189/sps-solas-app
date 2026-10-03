@@ -1,4 +1,5 @@
-import type { BodyMeasurement, FitnessGoal, PersonalRecord, Profile, Session, Settings } from '../types';
+import type { BodyMeasurement, FitnessGoal, PersonalRecord, Profile, Session, Settings, WaterLog } from '../types';
+import { baseTargetMl, fmtVolume, targetForDate, totalsByDate } from './water';
 import { ACTIVITY_LEVELS } from '../types';
 import { groupName } from '../data/exercises';
 import { formatLong, todayKey } from './date';
@@ -13,6 +14,7 @@ export interface ExportData {
   goals: FitnessGoal[];
   profile: Profile | null;
   settings: Settings;
+  water: WaterLog[];
 }
 
 const byDateAsc = (a: Session, b: Session) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.createdAt - b.createdAt);
@@ -95,8 +97,18 @@ export async function exportExcel(d: ExportData, from?: string, to?: string) {
   const goalSheet = [
     ['Goal', 'Target', 'Current', 'Completion %', 'Deadline', 'Status'].map(H),
     ...d.goals.map((g) => {
-      const p = goalProgress(g, d.sessions, d.measurements, d.profile, d.settings);
+      const p = goalProgress(g, d.sessions, d.measurements, d.profile, d.settings, d.water);
       return [g.title, g.target, Math.round(p.current * 10) / 10, p.pct, g.deadline ? dt(g.deadline) : '', g.archived ? 'Archived' : p.done ? 'Achieved' : 'Active'];
+    }),
+  ];
+
+  const base = baseTargetMl(d.profile, d.measurements, d.settings);
+  const waterDays = [...totalsByDate(d.water.filter((x) => (!from || x.date >= from) && (!to || x.date <= to))).entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1));
+  const waterSheet = [
+    ['Date', 'Total (ml)', 'Target (ml)', 'Target met', 'Entries'].map(H),
+    ...waterDays.map(([date, ml]) => {
+      const target = targetForDate(date, base, d.sessions, d.profile);
+      return [dt(date), ml, target, ml >= target ? 'Yes' : 'No', d.water.filter((x) => x.date === date).length];
     }),
   ];
 
@@ -108,6 +120,7 @@ export async function exportExcel(d: ExportData, from?: string, to?: string) {
     { sheet: 'Personal records', data: prSheet, columns: w(26, 14, 12, 6, 12, 10, 12, 16, 18), stickyRowsCount: 1 },
     { sheet: 'Body weight', data: bodySheet, columns: w(12, 12, 10, 10, 30), stickyRowsCount: 1 },
     { sheet: 'Goals', data: goalSheet, columns: w(36, 10, 10, 14, 12, 10), stickyRowsCount: 1 },
+    { sheet: 'Water', data: waterSheet, columns: w(12, 12, 12, 11, 9), stickyRowsCount: 1 },
   ] as never).toFile(`gym-diary-${todayKey()}.xlsx`);
 }
 
@@ -225,10 +238,22 @@ export async function exportPdf(d: ExportData, from?: string, to?: string) {
     table(
       ['Goal', 'Progress', 'Completion'],
       active.map((g) => {
-        const p = goalProgress(g, d.sessions, d.measurements, d.profile, d.settings);
+        const p = goalProgress(g, d.sessions, d.measurements, d.profile, d.settings, d.water);
         return [g.title, p.label, `${p.pct}%`];
       }),
     );
+  }
+
+  const wd = [...totalsByDate(d.water.filter((x) => (!from || x.date >= from) && (!to || x.date <= to))).entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1));
+  if (wd.length) {
+    const wBase = baseTargetMl(d.profile, d.measurements, d.settings);
+    const rows = wd.map(([date, ml]) => {
+      const t = targetForDate(date, wBase, d.sessions, d.profile);
+      return [date, fmtVolume(ml, d.settings.volumeUnit), fmtVolume(t, d.settings.volumeUnit), ml >= t ? 'Yes' : 'No'];
+    });
+    const met = rows.filter((r) => r[3] === 'Yes').length;
+    h2(`Hydration (target met ${met} of ${rows.length} logged days)`);
+    table(['Date', 'Drank', 'Target', 'Met'], rows);
   }
 
   if (d.measurements.length) {

@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { CaretLeft, CaretRight, Plus, Barbell, Heartbeat } from '@phosphor-icons/react';
+import { CaretLeft, CaretRight, Plus, Barbell, Heartbeat, Drop } from '@phosphor-icons/react';
 import { useData } from '../hooks/useData';
+import { baseTargetMl, fmtVolume, targetForDate, totalsByDate } from '../lib/water';
 import { Card, Empty, PageHeader, Stat } from '../components/ui';
 import SessionCard, { sessionTitle } from '../components/SessionCard';
 import { daysInMonth, formatLong, formatMonth, toKey, todayKey } from '../lib/date';
@@ -9,7 +10,10 @@ import { fmtMinutes, fmtNum, sessionCardioMin, sessionVolume, summarize } from '
 import type { Session } from '../types';
 
 export default function CalendarPage() {
-  const { sessions, settings } = useData();
+  const { sessions, settings, water, profile, measurements } = useData();
+  const waterBase = baseTargetMl(profile, measurements, settings);
+  const waterTotals = useMemo(() => totalsByDate(water), [water]);
+  const waterMet = (k: string) => (waterTotals.get(k) ?? 0) >= targetForDate(k, waterBase, sessions, profile);
   const [params, setParams] = useSearchParams();
   const today = todayKey();
   const selected = params.get('d') ?? today;
@@ -83,6 +87,7 @@ export default function CalendarPage() {
             const list = byDate.get(k) ?? [];
             const hasS = list.some((s) => s.kind === 'strength');
             const hasC = list.some((s) => s.kind === 'cardio');
+            const hasW = waterMet(k);
             const isSel = k === selected;
             const isToday = k === today;
             const future = k > today;
@@ -104,10 +109,11 @@ export default function CalendarPage() {
                 } ${isToday && !isSel ? 'ring-1 ring-ink/50' : ''}`}
               >
                 {Number(k.slice(8))}
-                {list.length > 0 && (
+                {(list.length > 0 || hasW) && (
                   <span className="absolute bottom-1 flex gap-0.5">
                     {hasS && <span className="h-1.5 w-1.5 rounded-full bg-str" />}
                     {hasC && <span className="h-1.5 w-1.5 rounded-full bg-car" />}
+                    {hasW && <span className={`h-1.5 w-1.5 rounded-full ${isSel ? 'bg-primary-ink' : 'bg-wat'}`} />}
                   </span>
                 )}
               </button>
@@ -117,6 +123,7 @@ export default function CalendarPage() {
         <div className="mt-3 flex items-center justify-center gap-4 text-xs text-muted">
           <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-str" /> Strength</span>
           <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-car" /> Cardio</span>
+          <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-wat" /> Water goal</span>
           <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full ring-1 ring-ink/50" /> Today</span>
         </div>
       </Card>
@@ -140,6 +147,19 @@ export default function CalendarPage() {
         <Empty title={selected > today ? 'This day is in the future' : 'Nothing logged'}>
           {selected <= today && 'Missed logging this day? Add it now.'}
         </Empty>
+      )}
+      {selected <= today && (
+        <Link
+          to={`/water?date=${selected}`}
+          className="mt-2 flex items-center gap-3 rounded-card border border-wat/20 bg-wat-soft px-4 py-3 text-wat"
+        >
+          <Drop size={18} weight="fill" />
+          <span className="num flex-1 text-sm font-medium">
+            Water: {fmtVolume(waterTotals.get(selected) ?? 0, settings.volumeUnit)} of{' '}
+            {fmtVolume(targetForDate(selected, waterBase, sessions, profile), settings.volumeUnit)}
+          </span>
+          <span className="text-sm underline underline-offset-4">{(waterTotals.get(selected) ?? 0) ? 'Edit' : 'Add'}</span>
+        </Link>
       )}
       {selected <= today && (
         <div className="mt-3 grid grid-cols-2 gap-2">

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { GearSix, UserCircle, CheckCircle, Circle, Barbell, Heartbeat, Plus, Trophy, Target } from '@phosphor-icons/react';
+import { GearSix, UserCircle, CheckCircle, Circle, Barbell, Heartbeat, Plus, Trophy, Target, Drop, CaretRight } from '@phosphor-icons/react';
 import { useData } from '../hooks/useData';
 import { Card, Chip, Empty, IconButton, PageHeader, Progress, SectionTitle, Stat } from '../components/ui';
 import SessionCard from '../components/SessionCard';
@@ -25,6 +25,10 @@ import { formatLong, formatShort, startOfMonth, startOfWeek, todayKey } from '..
 import { currentWeight, weightChange } from '../lib/body';
 import { goalProgress, overallGoalCompletion } from '../lib/goals';
 import { groupName } from '../data/exercises';
+import WaterRing from '../components/WaterRing';
+import { useHydration } from '../hooks/useHydration';
+import { saveWaterLog, uid } from '../db/db';
+import { fmtVolume } from '../lib/water';
 
 function greeting() {
   const h = new Date().getHours();
@@ -34,7 +38,7 @@ function greeting() {
 const signed = (n: number, digits = 1) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${fmtNum(Math.abs(n), digits)}`;
 
 export default function Dashboard() {
-  const { ready, sessions, settings, profile, measurements, goals, records, categoryOf } = useData();
+  const { ready, sessions, settings, profile, measurements, goals, records, categoryOf, water } = useData();
   const [trend, setTrend] = useState<'week' | 'month'>('week');
   const today = todayKey();
   const wu = settings.weightUnit;
@@ -65,10 +69,10 @@ export default function Dashboard() {
       annual: annualSummary(sessions),
       cardio: cardioUsage(sessions),
       cardioTypes: cardioByCategory(sessions, categoryOf),
-      goalPct: overallGoalCompletion(active.map((g) => goalProgress(g, sessions, measurements, profile, settings))),
+      goalPct: overallGoalCompletion(active.map((g) => goalProgress(g, sessions, measurements, profile, settings, water))),
       goalCount: active.length,
     };
-  }, [sessions, today, settings, records, goals, measurements, profile, categoryOf]);
+  }, [sessions, today, settings, records, goals, measurements, profile, categoryOf, water]);
 
   if (!ready) return <div className="p-8 text-center text-muted">Loading…</div>;
 
@@ -135,6 +139,9 @@ export default function Dashboard() {
           </div>
         )}
       </Card>
+
+      {/* Water */}
+      <WaterCard />
 
       {/* Overview */}
       <SectionTitle>Overview</SectionTitle>
@@ -376,5 +383,44 @@ function Mini({ label, value, sub, tone = 'text-ink' }: { label: string; value: 
       <div className={`h-display truncate text-[28px] ${tone}`}>{value}</div>
       {sub && <div className="truncate text-xs text-muted">{sub}</div>}
     </div>
+  );
+}
+
+/** Home-screen water card: live ring + one-tap add of the smallest quick size. */
+function WaterCard() {
+  const { settings } = useData();
+  const h = useHydration();
+  const [flash, setFlash] = useState(false);
+  const quick = h.sizes[0];
+  return (
+    <Card className="mt-2">
+      <div className="flex items-center gap-4">
+        <WaterRing ml={h.total} target={h.target} size={96} />
+        <div className="min-w-0 flex-1">
+          <div className="eyebrow">Water today</div>
+          <div className="num mt-1 font-medium">
+            <span className="text-wat">{fmtVolume(h.total, settings.volumeUnit)}</span>
+            <span className="text-muted"> / {fmtVolume(h.target, settings.volumeUnit)}</span>
+          </div>
+          <div className="text-xs text-muted">{h.remaining ? `${fmtVolume(h.remaining, settings.volumeUnit)} to go` : 'Target reached'}</div>
+          <div className="mt-2 flex gap-2">
+            <button
+              onClick={async () => {
+                await saveWaterLog({ id: uid(), date: todayKey(), amountMl: quick, loggedAt: Date.now() });
+                setFlash(true);
+                setTimeout(() => setFlash(false), 1200);
+              }}
+              className="inline-flex h-9 items-center gap-1 rounded-btn bg-wat px-3 text-sm font-medium text-bg transition-transform active:scale-[0.96]"
+              aria-label={`Add ${fmtVolume(quick, settings.volumeUnit)} of water`}
+            >
+              <Drop size={14} weight="fill" /> {flash ? 'Added' : `+${fmtVolume(quick, settings.volumeUnit, { short: true })}`}
+            </button>
+            <Link to="/water" className="inline-flex h-9 items-center gap-1 rounded-btn border border-line px-3 text-sm">
+              More <CaretRight size={12} weight="bold" />
+            </Link>
+          </div>
+        </div>
+      </div>
+    </Card>
   );
 }

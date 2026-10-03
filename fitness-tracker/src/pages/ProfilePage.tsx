@@ -9,6 +9,8 @@ import { deleteMeasurement, saveMeasurement, saveProfile, uid } from '../db/db';
 import { bmi, bmiLabel, currentWeight, dailyCalories, weightChange } from '../lib/body';
 import { formatShort, todayKey } from '../lib/date';
 import { fmtNum } from '../lib/stats';
+import { BONUS_ML_PER_HOUR, DEFAULT_QUICK_SIZES, DEFAULT_TARGET_ML, ML_PER_KG, fmtVolume, fromUnit, suggestedTargetMl, toUnit, unitLabel } from '../lib/water';
+import { Drop } from '@phosphor-icons/react';
 
 type Form = Omit<Profile, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -130,6 +132,8 @@ export default function ProfilePage() {
         </p>
       </Card>
 
+      <HydrationSection />
+
       <SectionTitle>Body weight log</SectionTitle>
       <Card>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -198,5 +202,105 @@ function Choice({ active, onClick, children }: { active: boolean; onClick: () =>
     >
       {children}
     </button>
+  );
+}
+
+/** Hydration target + quick-add sizes. Saved independently of the "About you" form. */
+function HydrationSection() {
+  const { profile, measurements, settings } = useData();
+  const unit = settings.volumeUnit;
+  const suggestion = suggestedTargetMl(profile, measurements, settings);
+  const [target, setTarget] = useState<number | undefined>();
+  const [bonus, setBonus] = useState(true);
+  const [sizes, setSizes] = useState<(number | undefined)[]>([]);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    setTarget(profile?.waterTargetMl ? toUnit(profile.waterTargetMl, unit) : undefined);
+    setBonus(profile?.waterWorkoutBonus !== false);
+    setSizes((profile?.waterQuickSizes ?? DEFAULT_QUICK_SIZES).map((ml) => toUnit(ml, unit)));
+  }, [profile, unit]);
+
+  const effective = target ? fromUnit(target, unit) : suggestion ?? DEFAULT_TARGET_ML;
+
+  async function save() {
+    const quick = sizes.map((v) => fromUnit(v ?? 0, unit));
+    await saveProfile({
+      ...(profile ?? { name: '' }),
+      waterTargetMl: target ? fromUnit(target, unit) : undefined,
+      waterWorkoutBonus: bonus,
+      waterQuickSizes: quick.every((n) => n > 0) ? quick : DEFAULT_QUICK_SIZES,
+    });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  return (
+    <>
+      <SectionTitle>
+        <span className="inline-flex items-center gap-1.5 text-wat">
+          <Drop size={12} weight="fill" /> Hydration
+        </span>
+      </SectionTitle>
+      <Card className="space-y-4">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <div className="eyebrow">Daily target</div>
+            <div className="h-display num mt-1 text-[34px] leading-none text-wat">{fmtVolume(effective, unit)}</div>
+            <div className="mt-1 text-xs text-muted">{target ? 'Your own target' : suggestion ? 'Suggested from your weight' : 'Default target'}</div>
+          </div>
+        </div>
+        <Field
+          label={`Your target (${unitLabel(unit)})`}
+          hint={
+            suggestion
+              ? `Suggested: ${fmtVolume(suggestion, unit)} (${ML_PER_KG} ml per kg of body weight). Leave empty to use it.`
+              : `Add your weight above to get a suggestion. Leave empty for ${fmtVolume(DEFAULT_TARGET_ML, unit)}.`
+          }
+        >
+          <div className="flex gap-2">
+            <NumberInput value={target} onChange={setTarget} placeholder="—" label="Daily water target" step={unit === 'oz' ? 1 : 50} />
+            {suggestion !== undefined && (
+              <Button className="shrink-0" onClick={() => setTarget(toUnit(suggestion, unit))}>
+                Use suggestion
+              </Button>
+            )}
+          </div>
+        </Field>
+        <label className="flex cursor-pointer items-start gap-3">
+          <input type="checkbox" checked={bonus} onChange={(e) => setBonus(e.target.checked)} className="mt-1 h-5 w-5 accent-[rgb(var(--wat))]" />
+          <span>
+            <span className="font-medium">Extra water on workout days</span>
+            <span className="block text-xs text-muted">
+              Adds {fmtVolume(BONUS_ML_PER_HOUR, unit)} per hour of logged exercise to that day&apos;s target.
+            </span>
+          </span>
+        </label>
+        <Field label={`Quick-add buttons (${unitLabel(unit)})`} group>
+          <div className="grid grid-cols-3 gap-2">
+            {['Glass', 'Bottle', 'Large'].map((name, i) => (
+              <div key={name}>
+                <NumberInput
+                  value={sizes[i]}
+                  onChange={(v) => setSizes(sizes.map((x, j) => (j === i ? v : x)))}
+                  label={`${name} size`}
+                  step={unit === 'oz' ? 1 : 50}
+                />
+                <div className="mt-1 text-center text-xs text-muted">{name}</div>
+              </div>
+            ))}
+          </div>
+        </Field>
+        <Button variant="primary" size="lg" className="w-full" onClick={save}>
+          {saved ? (
+            <>
+              <CheckCircle size={18} weight="fill" /> Saved
+            </>
+          ) : (
+            'Save hydration settings'
+          )}
+        </Button>
+      </Card>
+    </>
   );
 }

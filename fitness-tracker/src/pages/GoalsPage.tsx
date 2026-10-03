@@ -12,7 +12,7 @@ import { exerciseUsage } from '../lib/stats';
 
 export default function GoalsPage() {
   const nav = useNavigate();
-  const { goals, sessions, measurements, profile, settings, records } = useData();
+  const { goals, sessions, measurements, profile, settings, records, water } = useData();
   const [open, setOpen] = useState(false);
 
   const rows = useMemo(
@@ -20,8 +20,8 @@ export default function GoalsPage() {
       goals
         .filter((g) => !g.archived)
         .sort((a, b) => b.createdAt - a.createdAt)
-        .map((g) => ({ g, p: goalProgress(g, sessions, measurements, profile, settings) })),
-    [goals, sessions, measurements, profile, settings],
+        .map((g) => ({ g, p: goalProgress(g, sessions, measurements, profile, settings, water) })),
+    [goals, sessions, measurements, profile, settings, water],
   );
   const archived = goals.filter((g) => g.archived);
   const overall = overallGoalCompletion(rows.map((r) => r.p));

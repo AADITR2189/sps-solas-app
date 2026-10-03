@@ -25,6 +25,8 @@
   --gold-soft: 244 227 192; /* #F4E3C0 */
   --danger: 163 38 31; /* #A3261F */
   --danger-soft: 246 219 214; /* #F6DBD6 */
+  --wat: 11 102 112; /* #0B6670 */
+  --wat-soft: 211 236 236; /* #D3ECEC */
 }
 
 [data-theme='dark'] {
@@ -46,6 +48,8 @@
   --gold-soft: 58 44 18; /* #3A2C12 */
   --danger: 255 143 133; /* #FF8F85 */
   --danger-soft: 62 31 38; /* #3E1F26 */
+  --wat: 79 224 218; /* #4FE0DA */
+  --wat-soft: 14 58 64; /* #0E3A40 */
 }
 
 html,
@@ -128,7 +132,21 @@ body::before {
   opacity: 1;
   transform: none;
 }
+/* Water ring wave: one wave period = 25% of the path's width, so the loop is seamless. */
+.wave {
+  transform-box: fill-box;
+  animation: wave 3.2s linear infinite;
+}
+@keyframes wave {
+  to {
+    transform: translateX(-25%);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .wave {
+    animation: none;
+  }
   .reveal {
     opacity: 1;
     transform: none;

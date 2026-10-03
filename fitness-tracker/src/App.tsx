@@ -13,6 +13,7 @@ import SettingsPage from './pages/SettingsPage';
 import ProfilePage from './pages/ProfilePage';
 import GoalsPage from './pages/GoalsPage';
 import ExercisesPage from './pages/ExercisesPage';
+import WaterPage from './pages/WaterPage';
 
 function ScrollTop() {
   const { pathname } = useLocation();
@@ -38,6 +39,7 @@ export default function App() {
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/goals" element={<GoalsPage />} />
               <Route path="/exercises" element={<ExercisesPage />} />
+              <Route path="/water" element={<WaterPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="*" element={<Dashboard />} />
             </Routes>
