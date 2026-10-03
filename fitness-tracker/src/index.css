@@ -2,48 +2,50 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Warm monochrome + muted pastels. Values are "R G B" so Tailwind opacity modifiers work. */
+/* Primary colours: light = teal #004741 on sand #F0EDE4, dark = yellow #FFFE15 on navy #0C1E29.
+   Accent colours are tuned so every text colour reaches WCAG AA (>= 4.5:1) on every surface it sits on.
+   Values are "R G B" so Tailwind opacity modifiers work. */
 :root,
 [data-theme='light'] {
   color-scheme: light;
-  --bg: 247 246 243; /* #F7F6F3 bone */
-  --surface: 255 255 255;
-  --raised: 241 240 236;
-  --line: 234 234 234; /* #EAEAEA */
-  --ink: 47 52 55; /* #2F3437 charcoal */
-  --muted: 120 119 116; /* #787774 */
-  --primary: 17 17 17; /* #111111 */
-  --primary-ink: 255 255 255;
-  --primary-hover: 51 51 51;
-  --str: 52 101 56; /* #346538 */
-  --str-soft: 237 243 236; /* #EDF3EC */
-  --car: 31 108 159; /* #1F6C9F */
-  --car-soft: 225 243 254; /* #E1F3FE */
-  --gold: 149 100 0; /* #956400 */
-  --gold-soft: 251 243 219; /* #FBF3DB */
-  --danger: 159 47 45; /* #9F2F2D */
-  --danger-soft: 253 235 236; /* #FDEBEC */
+  --bg: 240 237 228; /* #F0EDE4 */
+  --surface: 250 248 242; /* #FAF8F2 */
+  --raised: 229 225 212; /* #E5E1D4 */
+  --line: 212 207 191; /* #D4CFBF */
+  --ink: 0 71 65; /* #004741 */
+  --muted: 74 103 99; /* #4A6763 */
+  --primary: 0 71 65; /* #004741 */
+  --primary-ink: 240 237 228; /* #F0EDE4 */
+  --primary-hover: 0 51 46; /* #00332E */
+  --str: 44 107 31; /* #2C6B1F */
+  --str-soft: 220 234 211; /* #DCEAD3 */
+  --car: 29 92 140; /* #1D5C8C */
+  --car-soft: 217 231 241; /* #D9E7F1 */
+  --gold: 138 83 0; /* #8A5300 */
+  --gold-soft: 244 227 192; /* #F4E3C0 */
+  --danger: 163 38 31; /* #A3261F */
+  --danger-soft: 246 219 214; /* #F6DBD6 */
 }
 
 [data-theme='dark'] {
   color-scheme: dark;
-  --bg: 25 25 25; /* #191919 */
-  --surface: 32 32 32;
-  --raised: 42 42 40;
-  --line: 47 47 45;
-  --ink: 237 236 232;
-  --muted: 155 154 151;
-  --primary: 237 236 232;
-  --primary-ink: 25 25 25;
-  --primary-hover: 214 213 208;
-  --str: 143 196 149;
-  --str-soft: 31 43 32;
-  --car: 123 184 224;
-  --car-soft: 27 42 53;
-  --gold: 224 181 92;
-  --gold-soft: 51 43 20;
-  --danger: 229 138 135;
-  --danger-soft: 58 32 33;
+  --bg: 12 30 41; /* #0C1E29 */
+  --surface: 17 42 57; /* #112A39 */
+  --raised: 23 54 72; /* #173648 */
+  --line: 36 71 92; /* #24475C */
+  --ink: 255 254 21; /* #FFFE15 */
+  --muted: 201 200 138; /* #C9C88A */
+  --primary: 255 254 21; /* #FFFE15 */
+  --primary-ink: 12 30 41; /* #0C1E29 */
+  --primary-hover: 230 229 19; /* #E6E513 */
+  --str: 126 224 138; /* #7EE08A */
+  --str-soft: 18 58 44; /* #123A2C */
+  --car: 111 199 255; /* #6FC7FF */
+  --car-soft: 16 51 72; /* #103348 */
+  --gold: 255 180 77; /* #FFB44D */
+  --gold-soft: 58 44 18; /* #3A2C12 */
+  --danger: 255 143 133; /* #FF8F85 */
+  --danger-soft: 62 31 38; /* #3E1F26 */
 }
 
 html,
