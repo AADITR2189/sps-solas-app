@@ -128,6 +128,85 @@ export function FavStar({ name, kind = 'strength' }: { name: string; kind?: 'str
   );
 }
 
+/**
+ * Always-visible "+ Add custom ..." control. Tapping opens a small form (name + type).
+ * If the search box has text with no exact match, that text pre-fills the name.
+ */
+function CustomAdd({
+  noun,
+  query,
+  options,
+  defaultOption,
+  existing,
+  onAdd,
+}: {
+  noun: string;
+  query: string;
+  options: { value: string; label: string }[];
+  defaultOption: string;
+  existing: string[];
+  onAdd: (name: string, option: string) => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [opt, setOpt] = useState(defaultOption);
+  const q = query.trim();
+  const qIsNew = !!q && !existing.some((e) => e.toLowerCase() === q.toLowerCase());
+  const clean = name.trim();
+  const dupe = !!clean && existing.some((e) => e.toLowerCase() === clean.toLowerCase());
+
+  if (!open)
+    return (
+      <Button
+        className="mt-3 w-full border-dashed"
+        onClick={() => {
+          setName(qIsNew ? q : '');
+          setOpt(defaultOption);
+          setOpen(true);
+        }}
+      >
+        <Plus size={16} weight="bold" /> {qIsNew ? `Add “${q}” as custom ${noun}` : `Add custom ${noun}`}
+      </Button>
+    );
+
+  return (
+    <div className="mt-3 rounded-card border border-line bg-bg p-4">
+      <div className="eyebrow mb-2">New custom {noun}</div>
+      <input
+        autoFocus
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder={`${noun[0].toUpperCase() + noun.slice(1)} name`}
+        aria-label={`Custom ${noun} name`}
+        className={inputCls}
+      />
+      <select value={opt} onChange={(e) => setOpt(e.target.value)} className={`${inputCls} mt-2`} aria-label={`Custom ${noun} type`}>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+      {dupe && <p className="mt-2 text-sm text-danger">That {noun} already exists. Pick it from the list instead.</p>}
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <Button onClick={() => setOpen(false)}>Cancel</Button>
+        <Button
+          variant="primary"
+          disabled={!clean || dupe}
+          onClick={async () => {
+            await onAdd(clean, opt);
+            setOpen(false);
+            setName('');
+          }}
+        >
+          <Plus size={16} weight="bold" /> Save
+        </Button>
+      </div>
+      <p className="mt-2 text-xs text-muted">Saved permanently on this phone and included in backups.</p>
+    </div>
+  );
+}
+
 export function ExercisePicker({
   open,
   onClose,
@@ -140,17 +219,8 @@ export function ExercisePicker({
   const { search } = useExerciseSearch();
   const [filter, setFilter] = useState<ExerciseFilter>('all');
   const [q, setQ] = useState('');
-  const [customGroup, setCustomGroup] = useState<MuscleGroup>('CHEST');
   const items = search(q, filter);
-  const exact = q.trim() && items.some((i) => i.name.toLowerCase() === q.trim().toLowerCase());
-
-  const addCustom = async () => {
-    const name = q.trim();
-    if (!name) return;
-    await addCustomExercise(name, customGroup);
-    onPick(name, customGroup);
-    setQ('');
-  };
+  const allNames = search('', 'all').map((i) => i.name);
 
   return (
     <Sheet open={open} onClose={onClose} title="Add exercise">
@@ -158,6 +228,18 @@ export function ExercisePicker({
         <MagnifyingGlass size={18} weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
         <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search exercises" className={`${inputCls} pl-10`} />
       </div>
+      <CustomAdd
+        noun="exercise"
+        query={q}
+        existing={allNames}
+        options={MUSCLE_GROUP_INFO.map((g) => ({ value: g.id, label: g.name }))}
+        defaultOption={filter in { CHEST: 1, BACK: 1, SHOULDERS: 1, BICEPS: 1, TRICEPS: 1, FOREARMS: 1, QUADS: 1, HAMSTRINGS: 1, GLUTES: 1, CALVES: 1, ABS: 1, 'FULL BODY': 1 } ? filter : 'CHEST'}
+        onAdd={async (name, g) => {
+          await addCustomExercise(name, g as MuscleGroup);
+          onPick(name, g as MuscleGroup);
+          setQ('');
+        }}
+      />
       <div className="mt-3">
         <FilterRow value={filter} onChange={setFilter} />
       </div>
@@ -176,21 +258,6 @@ export function ExercisePicker({
         <p className="py-8 text-center text-sm text-muted">
           {filter === 'favorites' ? 'Tap the star next to any exercise to keep it here.' : 'Nothing here yet.'}
         </p>
-      )}
-      {q.trim() && !exact && (
-        <div className="mt-4 rounded-card border border-line bg-bg p-4">
-          <div className="mb-2 text-sm text-muted">Create a custom exercise named “{q.trim()}”</div>
-          <select value={customGroup} onChange={(e) => setCustomGroup(e.target.value as MuscleGroup)} className={inputCls} aria-label="Muscle group">
-            {MUSCLE_GROUP_INFO.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-              </option>
-            ))}
-          </select>
-          <Button variant="primary" className="mt-2 w-full" onClick={addCustom}>
-            <Plus size={18} weight="bold" /> Add “{q.trim()}”
-          </Button>
-        </div>
       )}
     </Sheet>
   );
@@ -258,7 +325,6 @@ export function CardioPicker({
   const { cardioGroups, sessions, favoriteSet, categoryOf } = useData();
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('All');
-  const [customCat, setCustomCat] = useState('Other Cardio');
   const recent = useMemo(
     () => cardioUsage(sessions).sort((a, b) => (a.last < b.last ? 1 : -1)).slice(0, 6).map((c) => c.activity),
     [sessions],
@@ -269,15 +335,7 @@ export function CardioPicker({
     .filter((g) => cat === 'All' || g.category === cat)
     .map((g) => ({ ...g, activities: g.activities.filter((a) => a.toLowerCase().includes(query) || g.category.toLowerCase().includes(query)) }))
     .filter((g) => g.activities.length);
-  const exact = cardioGroups.some((g) => g.activities.some((a) => a.toLowerCase() === query));
-
-  const addCustom = async () => {
-    const name = q.trim();
-    if (!name) return;
-    await addCustomCardio({ id: uid(), name, category: customCat });
-    onPick(name, customCat);
-    setQ('');
-  };
+  const allActivities = cardioGroups.flatMap((g) => g.activities);
 
   const Grid = ({ names }: { names: string[] }) => (
     <div className="grid grid-cols-2 gap-2">
@@ -298,6 +356,18 @@ export function CardioPicker({
         <MagnifyingGlass size={18} weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search activities" className={`${inputCls} pl-10`} />
       </div>
+      <CustomAdd
+        noun="activity"
+        query={q}
+        existing={allActivities}
+        options={CARDIO_CATEGORIES.map((c) => ({ value: c.category, label: c.category }))}
+        defaultOption={cat !== 'All' ? cat : 'Other Cardio'}
+        onAdd={async (name, category) => {
+          await addCustomCardio({ id: uid(), name, category });
+          onPick(name, category);
+          setQ('');
+        }}
+      />
       <div className="no-scrollbar -mx-5 mt-3 flex gap-2 overflow-x-auto px-5 pb-1">
         {['All', ...CARDIO_CATEGORIES.map((c) => c.category)].map((c) => (
           <Chip key={c} active={cat === c} onClick={() => setCat(c)}>
@@ -323,19 +393,6 @@ export function CardioPicker({
           <Grid names={g.activities} />
         </div>
       ))}
-      {query && !exact && (
-        <div className="mt-5 rounded-card border border-line bg-bg p-4">
-          <div className="mb-2 text-sm text-muted">Create a custom activity named “{q.trim()}”</div>
-          <select value={customCat} onChange={(e) => setCustomCat(e.target.value)} className={inputCls} aria-label="Cardio type">
-            {CARDIO_CATEGORIES.map((c) => (
-              <option key={c.category}>{c.category}</option>
-            ))}
-          </select>
-          <Button variant="primary" className="mt-2 w-full" onClick={addCustom}>
-            <Plus size={18} weight="bold" /> Add “{q.trim()}”
-          </Button>
-        </div>
-      )}
     </Sheet>
   );
 }

@@ -86,19 +86,20 @@ The design is normalised. The same entities exist in two forms:
 
 ## 3. UI design system
 
-The design is warm monochrome with muted pastel accents. It is flat, uses 1px borders, and has no gradients or heavy shadows.
+The primary colours are **teal `#004741` on sand `#F0EDE4`** (light) and **yellow `#FFFE15` on navy `#0C1E29`** (dark). Every other colour is tuned so that all text reaches WCAG AA contrast (at least 4.5:1) on every surface it appears on. Borders are 1px; there are no gradients or heavy shadows.
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `bg` | `#F7F6F3` bone | `#191919` | Canvas |
-| `surface` / `raised` | `#FFFFFF` / `#F1F0EC` | `#202020` / `#2A2A28` | Cards / hover and inputs |
-| `line` | `#EAEAEA` | `#2F2F2D` | Every border and divider (1px) |
-| `ink` / `muted` | `#2F3437` / `#787774` | `#EDECE8` / `#9B9A97` | Text |
-| `primary` | `#111111` | `#EDECE8` (inverted) | Primary buttons, active filters |
-| `str` (+ `str-soft`) | `#346538` on `#EDF3EC` | `#8FC495` on `#1F2B20` | Strength identity |
-| `car` (+ `car-soft`) | `#1F6C9F` on `#E1F3FE` | `#7BB8E0` on `#1B2A35` | Cardio identity |
-| `gold` (+ soft) | `#956400` on `#FBF3DB` | `#E0B55C` on `#332B14` | Streaks, PRs, back-dating |
-| `danger` (+ soft) | `#9F2F2D` on `#FDEBEC` | `#E58A87` on `#3A2021` | Delete actions, calories series |
+| `bg` | `#F0EDE4` | `#0C1E29` | Canvas (primary background) |
+| `surface` / `raised` | `#FAF8F2` / `#E5E1D4` | `#112A39` / `#173648` | Cards / hover and inputs |
+| `line` | `#D4CFBF` | `#24475C` | Borders and dividers |
+| `ink` | `#004741` | `#FFFE15` | Primary text (9.1:1 / 15.8:1 on bg) |
+| `muted` | `#4A6763` | `#C9C88A` | Secondary text (at least 4.7:1 everywhere) |
+| `primary` | `#004741` on `#F0EDE4` | `#FFFE15` on `#0C1E29` | Primary buttons, active filters |
+| `str` (+ soft) | `#2C6B1F` on `#DCEAD3` | `#7EE08A` on `#123A2C` | Strength identity |
+| `car` (+ soft) | `#1D5C8C` on `#D9E7F1` | `#6FC7FF` on `#103348` | Cardio identity |
+| `gold` (+ soft) | `#8A5300` on `#F4E3C0` | `#FFB44D` on `#3A2C12` | Streaks, PRs, back-dating |
+| `danger` (+ soft) | `#A3261F` on `#F6DBD6` | `#FF8F85` on `#3E1F26` | Delete actions, calories series |
 
 - **Type ("Athletic"):** Barlow Condensed Bold for headings and big numbers. Page, section and chart titles are uppercase, like a scoreboard. Barlow for UI text (line-height 1.6). Geist Mono for small uppercase labels and metadata. All fonts are bundled locally, so they work offline.
 - **Icons:** Phosphor, in bold weight, or fill for the active state.

@@ -8,6 +8,8 @@ import { Card } from './ui';
 // never depends on colour alone: the chart title names the series and the axis names categories.
 export type Series = 'strength' | 'cardio' | 'gold' | 'rose' | 'ink';
 const color = (p: Palette, s: Series) => (s === 'ink' ? p.ink : p[s]);
+/** Short axis labels so ticks never clip: 9000 -> 9k, 13500 -> 13.5k. */
+const axisNum = (v: number) => (Math.abs(v) >= 1000 ? `${+(v / 1000).toFixed(1)}k` : `${+v.toFixed(1)}`);
 
 function useTooltip() {
   const p = usePalette();
@@ -73,7 +75,7 @@ export function TrendBars({
       <BarChart data={data} margin={{ top: 4, right: 4, left: -12, bottom: 0 }} barCategoryGap="22%">
         <CartesianGrid vertical={false} stroke={p.line} />
         <XAxis dataKey="label" tick={{ fill: p.muted, fontSize: 11 }} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={12} />
-        <YAxis tick={{ fill: p.muted, fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v) => fmtNum(v)} width={44} />
+        <YAxis tick={{ fill: p.muted, fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={axisNum} width={44} />
         <Tooltip {...tip} formatter={(v) => [`${fmtNum(Number(v), 1)} ${unit}`, '']} separator="" />
         <Bar dataKey={dataKey} fill={color(p, series)} radius={[4, 4, 0, 0]} maxBarSize={26} />
       </BarChart>
@@ -104,7 +106,7 @@ export function TrendLine({
       <LineChart data={data} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
         <CartesianGrid vertical={false} stroke={p.line} />
         <XAxis dataKey={xKey} tick={{ fill: p.muted, fontSize: 11 }} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={16} />
-        <YAxis tick={{ fill: p.muted, fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v) => fmtNum(v)} width={44} domain={['auto', 'auto']} />
+        <YAxis tick={{ fill: p.muted, fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={axisNum} width={44} domain={['auto', 'auto']} />
         <Tooltip {...tip} formatter={(v) => [`${fmtNum(Number(v), 1)} ${unit}`, '']} separator="" />
         <Line
           type="monotone"
