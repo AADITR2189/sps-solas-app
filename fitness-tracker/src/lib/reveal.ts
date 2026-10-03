@@ -12,7 +12,8 @@ function observer() {
             io?.unobserve(e.target);
           }
         }),
-      { rootMargin: '0px 0px -24px 0px', threshold: 0.01 },
+      // Extended upwards so content skipped by a fast scroll is revealed too.
+      { rootMargin: '100000px 0px -24px 0px', threshold: 0 },
     );
   return io;
 }

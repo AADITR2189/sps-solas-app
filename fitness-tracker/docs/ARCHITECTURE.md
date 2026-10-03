@@ -76,9 +76,12 @@ The design is normalised. The same entities exist in two forms:
 | `fitness_goals` | `fitnessGoals` | `id` | Goal type, target, baseline, deadline, achieved and archived flags |
 | `body_measurements` | `bodyMeasurements` | `id`; by-date | Weight, body fat %, waist |
 | `personal_records` | `personalRecords` | `exercise` | Materialised: heaviest set, best e1RM, best set and session volume |
+| `water_logs` | `waterLogs` | `id`; by-date | One row per drink: date, amount (ml), time logged. Added in DB v3. |
 | `cardio_activities` | `customCardio` | `id` | Custom activities. Built-ins live in code. |
 | `favorites`, `workout_templates` | `favorites`, `templates` | n/a | Quick entry |
 | n/a | `kv` | `settings` | Units, week start, theme |
+
+**Hydration (v3).** Database version 3 adds the `waterLogs` store; upgrading from v2 only creates the new store, so existing data is untouched (tested). The daily target is: the profile's own target, or else 35 ml per kg of current body weight, or else 2.5 L, plus 500 ml per hour of exercise logged that day when "extra water on workout days" is on.
 
 **Migrations.** `openDB(..., 2, upgrade)` creates the v2 stores. When it upgrades from v1, it reads the old embedded `sessions` store and splits each session into header, exercise and cardio rows. It moves custom exercises into `exercises`, builds `personalRecords`, then drops the old stores. This has been tested with real v1 data. Backups carry a `version` field, and restore accepts both v1 and v2 files.
 
@@ -104,7 +107,17 @@ The primary colours are **teal `#004741` on sand `#F0EDE4`** (light) and **yello
 - **Type ("Athletic"):** Barlow Condensed Bold for headings and big numbers. Page, section and chart titles are uppercase, like a scoreboard. Barlow for UI text (line-height 1.6). Geist Mono for small uppercase labels and metadata. All fonts are bundled locally, so they work offline.
 - **Icons:** Phosphor, in bold weight, or fill for the active state.
 - **Shape:** cards use a 12px radius, buttons and inputs 6px, and tags are pills.
-- **Motion:** cards fade and rise in on scroll (IntersectionObserver, 600ms, staggered by 80ms), buttons scale to 0.98 when pressed, and a single slow ambient light drifts on a fixed layer. All of it is switched off under `prefers-reduced-motion`.
+- **Motion:** cards fade and rise in on scroll (IntersectionObserver, 600ms, staggered by 80ms), buttons scale to 0.98 when pressed, and a single slow ambient light drifts on a fixed layer. Workout animations (`lib/anim.ts`, keyframes in `index.css`):
+  - Completed sets flash green and show a tick.
+  - New sets and exercises slide in.
+  - The save bar's sets and volume count up live.
+  - A gold **New PR** badge pops in when a set beats your record.
+  - Saving shows a drawn check mark with the session's stats, plus a sparkle burst for new PRs.
+  - Home has a weekly workout-goal ring.
+  - Big numbers count up when they come into view, and charts grow in when first scrolled to.
+  - The streak flame flickers while a streak is alive.
+  - Calendar workout days pop in one after another.
+  - Everything is switched off under `prefers-reduced-motion`.
 - **Theme:** Dark (default), Light or System. The choice is applied before first paint by an inline script, so there is no flash of the wrong theme.
 
 ---
@@ -122,6 +135,7 @@ The bottom navigation reads **Home · Calendar · [+] · History · Progress**. 
 | History | `#/history` | Search, date presets or a custom range, type and muscle filters |
 | Progress | `#/progress` | Streak, days this month, body weight, goal %, active days, body-weight trend, goals, exercise progression, strength improvement, strongest lifts, muscle frequency, personal bests |
 | Profile | `#/profile` | Name, height, weight, age, gender, fitness goal, activity level. BMI and maintenance calories. Weigh-in log with trend. |
+| Water | `#/water?date=` | Animated progress ring, three one-tap sizes (set in Profile), custom amount, undo, back-dating, edit and delete entries |
 | Goals | `#/goals` | Six goal types, live progress bars, overall %, deadline, archive and restore |
 | Exercises | `#/exercises` | Searchable, filterable library (by muscle, Legs, favourites, recent, frequent, custom) with per-exercise history, PR and "Log today" |
 | Settings | `#/settings` | Theme, units, Excel/PDF/CSV export with a date range, backup and restore, CSV import, storage, install help, custom exercises, sample data, erase |

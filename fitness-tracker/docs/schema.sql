@@ -148,6 +148,22 @@ CREATE TABLE personal_records (
     PRIMARY KEY (user_id, exercise_name)
 );
 
+-- Hydration: one row per drink (stored in ml; fl oz is display-only).
+CREATE TABLE water_logs (
+    id          UUID PRIMARY KEY,
+    user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    log_date    DATE NOT NULL,
+    amount_ml   INTEGER NOT NULL CHECK (amount_ml > 0),
+    logged_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX water_logs_user_date_idx ON water_logs (user_id, log_date);
+-- Hydration settings live on users: water_target_ml, water_workout_bonus, water_quick_sizes.
+ALTER TABLE users
+    ADD COLUMN water_target_ml      INTEGER CHECK (water_target_ml > 0),
+    ADD COLUMN water_workout_bonus  BOOLEAN NOT NULL DEFAULT true,
+    ADD COLUMN water_quick_sizes    INTEGER[] NOT NULL DEFAULT '{250,500,750}',
+    ADD COLUMN volume_unit          TEXT NOT NULL DEFAULT 'ml' CHECK (volume_unit IN ('ml','oz'));
+
 -- Supporting tables (also present in the app)
 CREATE TABLE favorites (
     user_id   UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,

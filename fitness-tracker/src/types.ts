@@ -133,6 +133,12 @@ export interface Profile {
   gender?: Gender;
   goal?: FitnessGoalFocus;
   activityLevel?: ActivityLevel;
+  /** Daily hydration target in ml (manual). Falls back to the weight-based suggestion. */
+  waterTargetMl?: number;
+  /** Add extra water to the target on workout days (default on). */
+  waterWorkoutBonus?: boolean;
+  /** One-tap quick-add sizes in ml (default 250 / 500 / 750). */
+  waterQuickSizes?: number[];
   createdAt: number;
   updatedAt: number;
 }
@@ -153,7 +159,8 @@ export type GoalType =
   | 'weeklySessions' // N workouts per week
   | 'weeklyCardio' // N cardio minutes per week
   | 'monthlyDays' // N active days this month
-  | 'totalVolume'; // lift a cumulative volume
+  | 'totalVolume' // lift a cumulative volume
+  | 'weeklyWater'; // hit the water target N days per week
 
 export interface FitnessGoal {
   id: string;
@@ -181,6 +188,17 @@ export interface PersonalRecord {
   bestSessionVolume: number;
 }
 
+// ---------- Hydration ----------
+
+/** One drink. Amount is always stored in ml; fl oz is display-only. */
+export interface WaterLog {
+  id: string;
+  date: DateKey;
+  amountMl: number;
+  /** When it was logged (ms). Used for ordering and the time shown in the list. */
+  loggedAt: number;
+}
+
 // ---------- Settings & backup ----------
 
 export type ThemePref = 'dark' | 'light' | 'system';
@@ -190,6 +208,7 @@ export interface Settings {
   distanceUnit: 'km' | 'mi';
   weekStartsOn: 0 | 1; // 0 = Sunday, 1 = Monday
   theme: ThemePref;
+  volumeUnit: 'ml' | 'oz';
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -197,6 +216,7 @@ export const DEFAULT_SETTINGS: Settings = {
   distanceUnit: 'km',
   weekStartsOn: 1,
   theme: 'dark',
+  volumeUnit: 'ml',
 };
 
 export interface BackupFile {
@@ -212,4 +232,5 @@ export interface BackupFile {
   profile?: Profile | null;
   measurements?: BodyMeasurement[];
   goals?: FitnessGoal[];
+  water?: WaterLog[];
 }

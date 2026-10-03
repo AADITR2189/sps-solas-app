@@ -1,4 +1,5 @@
-import type { BodyMeasurement, FitnessGoal, GoalType, Profile, Session, Settings } from '../types';
+import type { BodyMeasurement, FitnessGoal, GoalType, Profile, Session, Settings, WaterLog } from '../types';
+import { baseTargetMl, daysMet } from './water';
 import { inRange, summarize } from './stats';
 import { startOfMonth, startOfWeek, toKey, todayKey } from './date';
 import { currentWeight } from './body';
@@ -10,6 +11,7 @@ export const GOAL_TYPES: { type: GoalType; label: string; unit: (s: Settings) =>
   { type: 'bodyweight', label: 'Reach body weight', unit: (s) => s.weightUnit, hint: 'target weight' },
   { type: 'lift', label: 'Lift a weight', unit: (s) => s.weightUnit, hint: 'target for one set' },
   { type: 'totalVolume', label: 'Total volume lifted', unit: (s) => s.weightUnit, hint: 'e.g. 500000' },
+  { type: 'weeklyWater', label: 'Water target days per week', unit: () => 'days', hint: 'e.g. 6' },
 ];
 
 export interface GoalProgress {
@@ -26,6 +28,7 @@ export function goalProgress(
   measurements: BodyMeasurement[],
   profile: Profile | null,
   settings: Settings,
+  water: WaterLog[] = [],
 ): GoalProgress {
   const today = todayKey();
   const unit = GOAL_TYPES.find((t) => t.type === g.type)?.unit(settings) ?? '';
@@ -45,6 +48,12 @@ export function goalProgress(
     }
     case 'monthlyDays': {
       current = summarize(sessions.filter((s) => inRange(s.date, startOfMonth(today), today))).days;
+      pct = ratio(current);
+      break;
+    }
+    case 'weeklyWater': {
+      const base = baseTargetMl(profile, measurements, settings);
+      current = daysMet(startOfWeek(today, settings.weekStartsOn), today, water, base, sessions, profile);
       pct = ratio(current);
       break;
     }

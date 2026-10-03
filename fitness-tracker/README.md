@@ -12,6 +12,7 @@ Gym Diary is a private gym and cardio diary for one person. It works offline, ha
 - **Your exercise library.** Twelve muscle groups (with a combined Legs filter), plus custom exercises. Search, filters, favourites, and per-exercise history and records.
 - **Cardio.** Forty activities in 11 types (Running, Walking, Cycling, Swimming, HIIT, Sports and more) plus custom ones. Duration is required. Distance, calories and average heart rate are optional.
 - **Profile.** Name, height, weight, age, gender, fitness goal and activity level, with BMI and estimated maintenance calories. A body-weight log with a trend chart.
+- **Water tracker.** A Water button next to Strength and Cardio: one-tap glass, bottle and large sizes, custom amounts, undo, back-dating, and edit or delete. Your daily target is set in Profile (or suggested from your weight), with extra water added on workout days. An animated ring on Home and a 7/30-day chart, streak and average on Progress.
 - **Goals.** Workouts per week, cardio minutes, active days, body weight, lift targets and total volume, each with a live completion %.
 - **Dashboard.** Today, week and month, totals, current weight and weight change, average duration, and volume by week, month, day, muscle and year. PRs and weight progression. Cardio by type and activity, distance and calories trends.
 - **Progress.** Consistency streak, body-weight trend, exercise progression, strength improvement, strongest lifts, muscle frequency, personal bests and goal completion.

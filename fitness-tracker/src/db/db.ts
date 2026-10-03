@@ -16,6 +16,7 @@ import type {
   Settings,
   StrengthEntry,
   Template,
+  WaterLog,
 } from '../types';
 import { DEFAULT_SETTINGS } from '../types';
 import { EXERCISE_LIBRARY, MUSCLE_GROUP_INFO, exerciseId } from '../data/exercises';
@@ -35,6 +36,8 @@ import { personalRecords } from '../lib/stats';
  *  bodyMeasurements  keyPath id   idx by-date
  *  personalRecords   keyPath exercise                      – materialised, rebuilt on write
  *  customCardio, favorites, templates, kv (settings)
+ *
+ *  waterLogs        keyPath id   idx by-date              – hydration entries (v3)
  *
  *  v1 → v2 migration splits the old embedded `sessions` store into the rows above.
  * ==========================================================================*/
@@ -80,10 +83,11 @@ interface GymDB extends DBSchema {
   favorites: { key: string; value: Favorite };
   templates: { key: string; value: Template };
   kv: { key: string; value: unknown };
+  waterLogs: { key: string; value: WaterLog; indexes: { 'by-date': string } };
 }
 
 const DB_NAME = 'gym-diary';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 type Store = StoreNames<GymDB>;
 const SESSION_STORES = ['workoutSessions', 'workoutExercises', 'cardioSessions', 'personalRecords'] as const;
 
@@ -136,6 +140,10 @@ function db() {
             loose.deleteObjectStore('sessions');
             loose.deleteObjectStore('customExercises');
           }
+        }
+        if (oldVersion < 3) {
+          const w = d.createObjectStore('waterLogs', { keyPath: 'id' });
+          w.createIndex('by-date', 'date');
         }
       },
     }).then(async (d) => {
@@ -358,6 +366,28 @@ export async function deleteGoal(id: string) {
   notify();
 }
 
+// ============================ Water ============================
+
+export async function getWaterLogs() {
+  const all = await (await db()).getAll('waterLogs');
+  return all.sort((a, b) => (a.date === b.date ? a.loggedAt - b.loggedAt : a.date < b.date ? -1 : 1));
+}
+export async function saveWaterLog(w: WaterLog) {
+  await (await db()).put('waterLogs', w);
+  notify();
+}
+export async function putWaterLogs(list: WaterLog[]) {
+  const d = await db();
+  const tx = d.transaction('waterLogs', 'readwrite');
+  for (const w of list) await tx.store.put(w);
+  await tx.done;
+  notify();
+}
+export async function deleteWaterLog(id: string) {
+  await (await db()).delete('waterLogs', id);
+  notify();
+}
+
 // ============================ Settings ============================
 
 export async function getSettings(): Promise<Settings> {
@@ -386,6 +416,7 @@ export async function exportBackup(): Promise<BackupFile> {
     profile: (await d.get('users', 'me')) ?? null,
     measurements: await d.getAll('bodyMeasurements'),
     goals: await d.getAll('fitnessGoals'),
+    water: await d.getAll('waterLogs'),
   };
 }
 
@@ -401,6 +432,7 @@ const USER_STORES = [
   'favorites',
   'templates',
   'kv',
+  'waterLogs',
 ] as const;
 
 /** Accepts v1 and v2 backups. "replace" wipes user data first; "merge" upserts by id. */
@@ -420,6 +452,7 @@ export async function importBackup(b: BackupFile, mode: 'replace' | 'merge') {
   for (const t of b.templates ?? []) await tx.objectStore('templates').put(t);
   for (const m of b.measurements ?? []) await tx.objectStore('bodyMeasurements').put(m);
   for (const g of b.goals ?? []) await tx.objectStore('fitnessGoals').put(g);
+  for (const w of b.water ?? []) await tx.objectStore('waterLogs').put(w);
   if (b.profile) await tx.objectStore('users').put({ ...b.profile, id: 'me' });
   if (b.settings) await tx.objectStore('kv').put({ ...DEFAULT_SETTINGS, ...b.settings }, 'settings');
   await tx.done;

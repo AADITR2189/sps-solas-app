@@ -42,6 +42,7 @@ export const PALETTE = {
     cardio: '#1D5C8C',
     gold: '#8A5300',
     rose: '#A3261F',
+    water: '#0B6670',
   },
   dark: {
     bg: '#0C1E29',
@@ -53,6 +54,7 @@ export const PALETTE = {
     cardio: '#6FC7FF',
     gold: '#FFB44D',
     rose: '#FF8F85',
+    water: '#4FE0DA',
   },
 } as const;
 

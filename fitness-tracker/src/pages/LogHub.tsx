@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Barbell, Heartbeat, Lightning, Star, ClockCounterClockwise, Fire, Trash, ArrowCounterClockwise, Books } from '@phosphor-icons/react';
+import { Barbell, Drop, Heartbeat, Lightning, Star, ClockCounterClockwise, Fire, Trash, ArrowCounterClockwise, Books } from '@phosphor-icons/react';
 import { useData } from '../hooks/useData';
 import { Card, Field, IconButton, PageHeader, SectionTitle, Tag, inputCls } from '../components/ui';
 import { cardioUsage, exerciseUsage } from '../lib/stats';
@@ -82,20 +82,27 @@ export default function LogHub() {
         </Card>
       )}
 
-      <div className="mt-5 grid grid-cols-2 gap-3">
+      <div className="mt-5 grid grid-cols-3 gap-2">
         <button
           onClick={() => nav(q({ kind: 'strength' }))}
-          className="flex h-32 flex-col items-start justify-between rounded-card border border-str/20 bg-str-soft p-5 text-left text-str transition-transform active:scale-[0.98]"
+          className="flex h-28 flex-col items-start justify-between rounded-card border border-str/20 bg-str-soft p-4 text-left text-str transition-transform active:scale-[0.98]"
         >
-          <Barbell size={28} weight="bold" />
-          <span className="h-title text-3xl leading-tight">Strength</span>
+          <Barbell size={26} weight="bold" />
+          <span className="h-title text-xl leading-tight">Strength</span>
         </button>
         <button
           onClick={() => nav(q({ kind: 'cardio' }))}
-          className="flex h-32 flex-col items-start justify-between rounded-card border border-car/20 bg-car-soft p-5 text-left text-car transition-transform active:scale-[0.98]"
+          className="flex h-28 flex-col items-start justify-between rounded-card border border-car/20 bg-car-soft p-4 text-left text-car transition-transform active:scale-[0.98]"
         >
-          <Heartbeat size={28} weight="bold" />
-          <span className="h-title text-3xl leading-tight">Cardio</span>
+          <Heartbeat size={26} weight="bold" />
+          <span className="h-title text-xl leading-tight">Cardio</span>
+        </button>
+        <button
+          onClick={() => nav(`/water?date=${date}`)}
+          className="flex h-28 flex-col items-start justify-between rounded-card border border-wat/20 bg-wat-soft p-4 text-left text-wat transition-transform active:scale-[0.98]"
+        >
+          <Drop size={26} weight="bold" />
+          <span className="h-title text-xl leading-tight">Water</span>
         </button>
       </div>
 

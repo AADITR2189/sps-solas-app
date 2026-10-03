@@ -18,6 +18,7 @@ export default {
         car: { DEFAULT: v('car'), soft: v('car-soft') },
         gold: { DEFAULT: v('gold'), soft: v('gold-soft') },
         danger: { DEFAULT: v('danger'), soft: v('danger-soft') },
+        wat: { DEFAULT: v('wat'), soft: v('wat-soft') },
       },
       fontFamily: {
         // "Athletic" type: condensed display face for headings and numbers, Barlow for UI text.

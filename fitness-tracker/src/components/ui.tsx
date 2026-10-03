@@ -2,8 +2,9 @@ import { useEffect, type ReactNode, type ButtonHTMLAttributes, type CSSPropertie
 import { Link } from 'react-router-dom';
 import { X } from '@phosphor-icons/react';
 import { useReveal } from '../lib/reveal';
+import CountUp from './CountUp';
 
-export type Tone = 'default' | 'str' | 'car' | 'gold' | 'danger';
+export type Tone = 'default' | 'str' | 'car' | 'gold' | 'danger' | 'wat';
 
 export function Card({
   children,
@@ -44,6 +45,7 @@ const toneText: Record<Tone, string> = {
   car: 'text-car',
   gold: 'text-gold',
   danger: 'text-danger',
+  wat: 'text-wat',
 };
 
 export function Stat({
@@ -62,7 +64,7 @@ export function Stat({
   return (
     <Card index={index} className="p-4">
       <div className="eyebrow leading-tight">{label}</div>
-      <div className={`h-display num mt-2 text-[34px] ${toneText[tone]}`}>{value}</div>
+      <div className={`h-display num mt-2 text-[34px] ${toneText[tone]}`}>{typeof value === 'number' ? <CountUp value={value} /> : value}</div>
       {sub !== undefined && <div className="mt-1 text-xs leading-snug text-muted">{sub}</div>}
     </Card>
   );
@@ -76,6 +78,7 @@ export function Tag({ tone = 'default', children }: { tone?: Tone; children: Rea
     car: 'bg-car-soft text-car',
     gold: 'bg-gold-soft text-gold',
     danger: 'bg-danger-soft text-danger',
+    wat: 'bg-wat-soft text-wat',
   }[tone];
   return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.05em] ${t}`}>{children}</span>;
 }
@@ -88,6 +91,7 @@ export function IconBadge({ tone = 'default', children, size = 'md' }: { tone?: 
     car: 'bg-car-soft text-car',
     gold: 'bg-gold-soft text-gold',
     danger: 'bg-danger-soft text-danger',
+    wat: 'bg-wat-soft text-wat',
   }[tone];
   return <span className={`grid shrink-0 place-items-center rounded-lg ${size === 'sm' ? 'h-8 w-8' : 'h-10 w-10'} ${t}`}>{children}</span>;
 }
@@ -256,7 +260,7 @@ export function Field({ label, children, hint, group }: { label: string; childre
 
 /** Thin horizontal progress bar. */
 export function Progress({ pct, tone = 'str' }: { pct: number; tone?: Tone }) {
-  const fill = { default: 'bg-ink', str: 'bg-str', car: 'bg-car', gold: 'bg-gold', danger: 'bg-danger' }[tone];
+  const fill = { default: 'bg-ink', str: 'bg-str', car: 'bg-car', gold: 'bg-gold', danger: 'bg-danger', wat: 'bg-wat' }[tone];
   return (
     <div className="h-1.5 w-full overflow-hidden rounded-full bg-raised">
       <div className={`h-full rounded-full ${fill} transition-[width] duration-700`} style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} />

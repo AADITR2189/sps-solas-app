@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash, CopySimple, NotePencil, Barbell, Heartbeat, BookmarkSimple, ClockCounterClockwise } from '@phosphor-icons/react';
+import { ArrowLeft, Plus, Trash, CopySimple, NotePencil, Barbell, Heartbeat, BookmarkSimple, ClockCounterClockwise, Check, Trophy } from '@phosphor-icons/react';
 import { useData } from '../hooks/useData';
 import { Button, Card, Field, IconBadge, NumberInput, Tag, inputCls } from '../components/ui';
 import { ExercisePicker, CardioPicker, ExerciseAutocomplete } from '../components/ExercisePicker';
 import type { CardioEntry, MuscleGroup, Session, SessionKind, StrengthEntry } from '../types';
 import { deleteSession, saveSession, saveTemplate, uid } from '../db/db';
 import { formatLong, isValidKey, todayKey } from '../lib/date';
-import { entryVolume, fmtNum, lastSetsFor, sessionCardioMin, sessionVolume } from '../lib/stats';
+import { entryVolume, fmtNum, lastSetsFor, personalRecords, sessionCardioMin, sessionVolume, fmtMinutes } from '../lib/stats';
+import CountUp from '../components/CountUp';
+import { useFlash } from '../lib/anim';
+import type { PersonalRecord } from '../types';
 import { groupName } from '../data/exercises';
 
 export const DRAFT_KEY = 'gym-diary-draft';
@@ -42,7 +45,12 @@ export default function Editor() {
   const [picker, setPicker] = useState(false);
   const [cardioPicker, setCardioPicker] = useState(false);
   const [error, setError] = useState('');
+  const [celebrate, setCelebrate] = useState<Celebration | null>(null);
   const initialised = useRef(false);
+  /** Ids present when the editor opened; anything else was added now and slides in. */
+  const initialIds = useRef<Set<string> | null>(null);
+  if (s && !initialIds.current) initialIds.current = new Set([...s.strength.map((e) => e.id), ...s.cardio.map((c) => c.id)]);
+  const isAdded = (id: string) => !!initialIds.current && !initialIds.current.has(id);
 
   // Build the session being edited once data is loaded.
   useEffect(() => {
@@ -112,6 +120,13 @@ export default function Editor() {
     [s],
   );
 
+  // Personal records from every other session, to spot new PRs while typing.
+  const prevBest = useMemo(() => {
+    const m = new Map<string, PersonalRecord>();
+    for (const pr of personalRecords(sessions.filter((x) => x.id !== s?.id))) m.set(pr.exercise, pr);
+    return m;
+  }, [sessions, s?.id]);
+
   if (!s || !stats) return <div className="p-8 text-center text-muted">Loading…</div>;
 
   const goBack = () => ((window.history.state?.idx ?? 0) > 0 ? nav(-1) : nav('/'));
@@ -145,7 +160,17 @@ export default function Editor() {
     };
     await saveSession(clean);
     if (isNew) clearDraft();
-    goBack();
+    const prs = clean.strength
+      .map((e) => ({ e, best: newPrSet(e, prevBest.get(e.exercise)) }))
+      .filter((x) => x.best)
+      .map((x) => `${x.e.exercise}: ${x.best!.weight} ${settings.weightUnit} × ${x.best!.reps}`);
+    setCelebrate({
+      kind: clean.kind,
+      sets: clean.strength.reduce((a, e) => a + e.sets.length, 0),
+      volume: sessionVolume(clean),
+      minutes: clean.kind === 'cardio' ? sessionCardioMin(clean) : clean.durationMin ?? 0,
+      prs,
+    });
   }
 
   async function onDelete() {
@@ -240,6 +265,8 @@ export default function Editor() {
           {s.strength.map((e, idx) => (
             <StrengthCard
               key={e.id}
+              added={isAdded(e.id)}
+              prev={prevBest.get(e.exercise)}
               e={e}
               idx={idx}
               unit={settings.weightUnit}
@@ -259,7 +286,7 @@ export default function Editor() {
       {isCardio && (
         <div className="mt-6 space-y-3">
           {s.cardio.map((c) => (
-            <Card key={c.id}>
+            <Card key={c.id} className={isAdded(c.id) ? 'anim-slide-in' : ''}>
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <div className="h-title truncate text-xl">{c.activity}</div>
@@ -324,11 +351,20 @@ export default function Editor() {
             <div className="num min-w-0 flex-1 text-sm text-muted">
               {isCardio ? (
                 <>
-                  <span className="font-medium text-ink">{stats.minutes}</span> min total
+                  <span className="font-medium text-ink">
+                    <CountUp value={stats.minutes} duration={400} />
+                  </span>{' '}
+                  min total
                 </>
               ) : (
                 <>
-                  <span className="font-medium text-ink">{stats.sets}</span> sets · <span className="font-medium text-ink">{fmtNum(stats.volume)}</span>{' '}
+                  <span className="font-medium text-ink">
+                    <CountUp value={stats.sets} duration={400} />
+                  </span>{' '}
+                  sets ·{' '}
+                  <span className="font-medium text-ink">
+                    <CountUp value={stats.volume} duration={450} format={(n) => fmtNum(Math.round(n))} />
+                  </span>{' '}
                   {settings.weightUnit}
                 </>
               )}
@@ -339,6 +375,8 @@ export default function Editor() {
           </div>
         </div>
       </div>
+
+      {celebrate && <SavedOverlay c={celebrate} unit={settings.weightUnit} onDone={goBack} />}
 
       <ExercisePicker
         open={picker}
@@ -368,10 +406,14 @@ function StrengthCard({
   lastSets,
   onChange,
   onRemove,
+  added,
+  prev,
 }: {
   e: StrengthEntry;
   idx: number;
   unit: string;
+  added?: boolean;
+  prev?: PersonalRecord;
   lastSets: StrengthEntry['sets'] | null;
   onChange: (fn: (e: StrengthEntry) => StrengthEntry) => void;
   onRemove: () => void;
@@ -380,8 +422,10 @@ function StrengthCard({
   const setSet = (i: number, patch: Partial<{ reps: number; weight: number }>) =>
     onChange((x) => ({ ...x, sets: x.sets.map((st, j) => (j === i ? { ...st, ...patch } : st)) }));
   const last = e.sets[e.sets.length - 1];
+  const initialSets = useRef(e.sets.length);
+  const pr = newPrSet(e, prev);
   return (
-    <Card className="p-4">
+    <Card className={`p-4 ${added ? 'anim-slide-in' : ''}`}>
       <div className="flex items-start gap-3">
         <IconBadge tone="str" size="sm">
           <span className="num text-sm font-semibold">{idx + 1}</span>
@@ -399,6 +443,14 @@ function StrengthCard({
           <Trash size={18} weight="bold" />
         </button>
       </div>
+      {pr && (
+        <div
+          key={`${pr.weight}x${pr.reps}`}
+          className="anim-pop mt-2 inline-flex items-center gap-1.5 rounded-full border border-gold/30 bg-gold-soft px-2.5 py-1 text-xs font-semibold text-gold"
+        >
+          <Trophy size={13} weight="fill" /> New PR: {pr.weight} {unit} × {pr.reps}
+        </div>
+      )}
       {lastSets && (
         <div className="mt-2 flex items-center gap-1.5 font-mono text-[11px] text-muted">
           <ClockCounterClockwise size={12} weight="bold" /> Last time: {lastSets.map((x) => `${x.weight}×${x.reps}`).join(', ')}
@@ -412,18 +464,16 @@ function StrengthCard({
       </div>
       <div className="mt-1.5 space-y-2">
         {e.sets.map((st, i) => (
-          <div key={i} className="grid grid-cols-[2rem_1fr_1fr_2.5rem] items-center gap-2">
-            <span className="num text-center font-medium text-muted">{i + 1}</span>
-            <NumberInput value={st.weight} step={0.5} onChange={(v) => setSet(i, { weight: v ?? 0 })} label={`Set ${i + 1} weight`} />
-            <NumberInput value={st.reps} onChange={(v) => setSet(i, { reps: v ?? 0 })} label={`Set ${i + 1} reps`} />
-            <button
-              onClick={() => onChange((x) => ({ ...x, sets: x.sets.filter((_, j) => j !== i) }))}
-              className="grid h-10 w-10 place-items-center text-muted"
-              aria-label={`Remove set ${i + 1}`}
-            >
-              <Trash size={16} weight="bold" />
-            </button>
-          </div>
+          <SetRow
+            key={i}
+            i={i}
+            weight={st.weight}
+            reps={st.reps}
+            added={i >= initialSets.current}
+            onWeight={(v) => setSet(i, { weight: v ?? 0 })}
+            onReps={(v) => setSet(i, { reps: v ?? 0 })}
+            onRemove={() => onChange((x) => ({ ...x, sets: x.sets.filter((_, j) => j !== i) }))}
+          />
         ))}
       </div>
       <Button
@@ -448,5 +498,150 @@ function StrengthCard({
         />
       )}
     </Card>
+  );
+}
+
+/** The heaviest set in this entry if it beats the previous record (heavier, or same weight for more reps). */
+function newPrSet(e: StrengthEntry, prev?: PersonalRecord) {
+  if (!prev) return null; // first time doing an exercise isn't treated as a PR
+  let best: { weight: number; reps: number } | null = null;
+  for (const st of e.sets) {
+    if (!st.reps || !st.weight) continue;
+    const beats = st.weight > prev.maxWeight || (st.weight === prev.maxWeight && st.reps > prev.maxWeightReps);
+    if (beats && (!best || st.weight > best.weight || (st.weight === best.weight && st.reps > best.reps))) best = { weight: st.weight, reps: st.reps };
+  }
+  return best;
+}
+
+/** One set row. Flashes green and shows a tick the moment both weight and reps are filled. */
+function SetRow({
+  i,
+  weight,
+  reps,
+  added,
+  onWeight,
+  onReps,
+  onRemove,
+}: {
+  i: number;
+  weight: number;
+  reps: number;
+  added: boolean;
+  onWeight: (v: number | undefined) => void;
+  onReps: (v: number | undefined) => void;
+  onRemove: () => void;
+}) {
+  const done = weight > 0 && reps > 0;
+  const flash = useFlash(done);
+  return (
+    <div className={`grid grid-cols-[2rem_1fr_1fr_2.5rem] items-center gap-2 rounded-btn ${added ? 'anim-slide-in' : ''} ${flash ? 'anim-set-done' : ''}`}>
+      <span className="grid place-items-center">
+        {done ? (
+          <span key="tick" className={`grid h-6 w-6 place-items-center rounded-full bg-str-soft text-str ${flash ? 'anim-pop' : ''}`} aria-label={`Set ${i + 1} complete`}>
+            <Check size={14} weight="bold" />
+          </span>
+        ) : (
+          <span className="num text-center font-medium text-muted">{i + 1}</span>
+        )}
+      </span>
+      <NumberInput value={weight} step={0.5} onChange={onWeight} label={`Set ${i + 1} weight`} />
+      <NumberInput value={reps} onChange={onReps} label={`Set ${i + 1} reps`} />
+      <button onClick={onRemove} className="grid h-10 w-10 place-items-center text-muted" aria-label={`Remove set ${i + 1}`}>
+        <Trash size={16} weight="bold" />
+      </button>
+    </div>
+  );
+}
+
+interface Celebration {
+  kind: 'strength' | 'cardio';
+  sets: number;
+  volume: number;
+  minutes: number;
+  prs: string[];
+}
+
+/** Full-screen "saved" moment: a drawn check mark, counting stats and any new PRs with a sparkle burst. */
+function SavedOverlay({ c, unit, onDone }: { c: Celebration; unit: string; onDone: () => void }) {
+  const doneRef = useRef(false);
+  const finish = () => {
+    if (doneRef.current) return;
+    doneRef.current = true;
+    onDone();
+  };
+  useEffect(() => {
+    const t = window.setTimeout(finish, c.prs.length ? 2600 : 1700);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const sparks = Array.from({ length: 14 }, (_, i) => {
+    const a = (i / 14) * Math.PI * 2;
+    const d = 46 + (i % 3) * 14;
+    return { dx: `${Math.cos(a) * d}px`, dy: `${Math.sin(a) * d}px`, delay: `${(i % 4) * 40}ms`, cls: i % 2 ? 'bg-gold' : 'bg-str' };
+  });
+  return (
+    <div className="anim-fade fixed inset-0 z-[60] flex items-center justify-center bg-bg/85 px-6 backdrop-blur-sm" onClick={finish} role="status">
+      <div className="anim-pop w-full max-w-xs rounded-card border border-line bg-surface p-6 text-center">
+        <svg width="84" height="84" viewBox="0 0 84 84" className="mx-auto">
+          <circle cx="42" cy="42" r="38" fill="none" className="stroke-str anim-draw" strokeWidth="5" style={{ ['--len' as string]: 240 }} />
+          <path
+            d="M26 43 l11 11 l22 -24"
+            fill="none"
+            className="stroke-str anim-draw"
+            strokeWidth="6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ ['--len' as string]: 56, animationDelay: '380ms' }}
+          />
+        </svg>
+        <div className="h-title mt-3 text-3xl">Workout saved</div>
+        <div className="mt-2 text-sm text-muted">
+          {c.kind === 'cardio' ? (
+            <>
+              <span className="font-medium text-ink">
+                <CountUp value={c.minutes} format={(n) => fmtMinutes(n)} />
+              </span>{' '}
+              of cardio
+            </>
+          ) : (
+            <>
+              <span className="font-medium text-ink">
+                <CountUp value={c.sets} />
+              </span>{' '}
+              sets ·{' '}
+              <span className="font-medium text-ink">
+                <CountUp value={c.volume} format={(n) => fmtNum(Math.round(n))} />
+              </span>{' '}
+              {unit} lifted
+            </>
+          )}
+        </div>
+        {c.prs.length > 0 && (
+          <div className="mt-5">
+            <div className="relative mx-auto h-14 w-14">
+              {sparks.map((p, i) => (
+                <span
+                  key={i}
+                  className={`sparkle ${p.cls}`}
+                  style={{ ['--dx' as string]: p.dx, ['--dy' as string]: p.dy, animationDelay: `calc(600ms + ${p.delay})` }}
+                />
+              ))}
+              <span className="anim-pop absolute inset-0 grid place-items-center rounded-full bg-gold-soft text-gold" style={{ animationDelay: '600ms' }}>
+                <Trophy size={28} weight="fill" />
+              </span>
+            </div>
+            <div className="h-title mt-2 text-xl text-gold">{c.prs.length > 1 ? `${c.prs.length} new PRs` : 'New PR'}</div>
+            <ul className="mt-1 space-y-0.5 text-sm">
+              {c.prs.map((p) => (
+                <li key={p} className="num">
+                  {p}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <div className="mt-5 text-xs text-muted">Tap anywhere to continue</div>
+      </div>
+    </div>
   );
 }
