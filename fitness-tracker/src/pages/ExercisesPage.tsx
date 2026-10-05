@@ -7,6 +7,10 @@ import { FavStar, FilterRow, useExerciseSearch, type ExerciseFilter } from '../c
 import { groupName } from '../data/exercises';
 import { fmtNum } from '../lib/stats';
 import { formatShort, todayKey } from '../lib/date';
+import BodyMap from '../components/BodyMap';
+import { EQUIPMENT_LABEL, exerciseMeta, regionInfo } from '../data/muscles';
+import { exerciseIntensity } from '../lib/heatmap';
+import type { MuscleGroup } from '../types';
 
 /** Searchable, filterable exercise library with per-exercise history and records. */
 export default function ExercisesPage() {
@@ -74,6 +78,7 @@ export default function ExercisesPage() {
                 </div>
                 {isOpen && (
                   <div className="border-t border-line bg-bg px-4 py-3">
+                    <MuscleInfo name={it.name} group={it.group} />
                     {pr && (
                       <div className="mb-2 flex items-center gap-2 text-sm">
                         <Trophy size={14} weight="fill" className="text-gold" />
@@ -107,6 +112,31 @@ export default function ExercisesPage() {
         </ul>
         {!items.length && <p className="px-4 py-10 text-center text-sm text-muted">No exercises match. You can add custom ones while logging a workout.</p>}
       </Card>
+    </div>
+  );
+}
+
+/** Which muscles an exercise works, with a small body map. */
+function MuscleInfo({ name, group }: { name: string; group: MuscleGroup }) {
+  const meta = exerciseMeta(name, group);
+  return (
+    <div className="mb-3 flex items-center gap-3">
+      <BodyMap values={exerciseIntensity(name, group)} mode="mono" view="auto" width={44} compact />
+      <div className="min-w-0 flex-1 text-xs">
+        {meta.known && (
+          <div className="mb-1">
+            <Tag tone="str">{EQUIPMENT_LABEL[meta.equipment]}</Tag>
+          </div>
+        )}
+        <div>
+          <span className="text-muted">Main:</span> {meta.primary.map((r) => regionInfo(r).name).join(', ')}
+        </div>
+        {meta.secondary.length > 0 && (
+          <div className="mt-0.5">
+            <span className="text-muted">Helpers:</span> {meta.secondary.map((r) => regionInfo(r).name).join(', ')}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

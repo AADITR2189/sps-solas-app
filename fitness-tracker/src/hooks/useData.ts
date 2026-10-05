@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, createElement, type ReactNode } from 'react';
 import * as db from '../db/db';
 import { EXERCISE_LIBRARY } from '../data/exercises';
-import { BUILT_IN_TEMPLATES, CARDIO_CATEGORIES, cardioCategory } from '../data/cardio';
+import { CARDIO_CATEGORIES, cardioCategory } from '../data/cardio';
 import type {
   BodyMeasurement,
   CustomCardio,
@@ -42,7 +42,6 @@ interface DataCtx extends DataState {
   cardioGroups: { category: string; activities: string[] }[];
   cardioActivities: string[];
   categoryOf: (activity: string) => string;
-  templates: Template[];
   favoriteSet: Set<string>;
 }
 
@@ -115,7 +114,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
       cardioGroups,
       cardioActivities: cardioGroups.flatMap((g) => g.activities),
       categoryOf: (a: string) => cardioCategory(a, customCat.get(a)),
-      templates: [...BUILT_IN_TEMPLATES, ...state.userTemplates],
       favoriteSet: new Set(state.favorites.map((f) => f.key)),
     };
   }, [state]);

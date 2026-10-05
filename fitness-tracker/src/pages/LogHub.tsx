@@ -1,19 +1,33 @@
 import { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Barbell, Drop, Heartbeat, Lightning, Star, ClockCounterClockwise, Fire, Trash, ArrowCounterClockwise, Books } from '@phosphor-icons/react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Barbell, Drop, Heartbeat, Lightning, Star, ClockCounterClockwise, Fire, Trash, ArrowCounterClockwise, Books, Sparkle, SquaresFour, BookmarkSimple } from '@phosphor-icons/react';
 import { useData } from '../hooks/useData';
 import { Card, Field, IconButton, PageHeader, SectionTitle, Tag, inputCls } from '../components/ui';
 import { cardioUsage, exerciseUsage } from '../lib/stats';
-import { formatLong, todayKey } from '../lib/date';
+import { formatLong, isValidKey, todayKey } from '../lib/date';
+import { TemplateCard, TemplateSheet } from '../components/TemplateViews';
+import { TEMPLATE_DEFS } from '../data/templateCatalog';
+import { buildTemplate, favoriteKey, prefsFrom, recommend, type CatalogTemplate } from '../lib/templates';
 import { deleteTemplate } from '../db/db';
 import { readDraft, clearDraft } from './Editor';
 import type { MuscleGroup } from '../types';
 import { MUSCLE_GROUPS } from '../types';
 
 export default function LogHub() {
-  const { sessions, templates, favoriteSet, library } = useData();
+  const { sessions, userTemplates, favoriteSet, library, profile } = useData();
   const nav = useNavigate();
-  const [date, setDate] = useState(todayKey());
+  const [params] = useSearchParams();
+  const [date, setDate] = useState(() => {
+    const d = params.get('date') ?? '';
+    return isValidKey(d) && d <= todayKey() ? d : todayKey();
+  });
+  const [open, setOpen] = useState<CatalogTemplate | null>(null);
+  const prefs = prefsFrom(profile);
+  const recs = useMemo(() => recommend(sessions), [sessions]);
+  const favTemplates = TEMPLATE_DEFS.filter((d) => favoriteSet.has(favoriteKey(d.id)));
+  const quick = (favTemplates.length ? favTemplates : TEMPLATE_DEFS.filter((d) => d.category === 'classic')).map((d) =>
+    buildTemplate(d, prefs.equipment, prefs.level, prefs.goal),
+  );
   const [draft, setDraft] = useState(readDraft);
 
   const usage = useMemo(() => exerciseUsage(sessions), [sessions]);
@@ -106,40 +120,77 @@ export default function LogHub() {
         </button>
       </div>
 
-      <SectionTitle>
+      <SectionTitle
+        action={
+          <Link to={`/templates?date=${date}`} className="text-sm font-medium text-str">
+            Browse all {TEMPLATE_DEFS.length * 3}
+          </Link>
+        }
+      >
         <span className="inline-flex items-center gap-1.5">
-          <Lightning size={12} weight="fill" /> One-tap templates
+          <Sparkle size={12} weight="fill" /> Recommended for you
         </span>
       </SectionTitle>
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-        {templates.map((t) => (
-          <div key={t.id} className="relative">
-            <Link
-              to={q({ template: t.id })}
-              className="flex min-h-[72px] flex-col justify-center rounded-card border border-line bg-surface px-4 py-3 transition-shadow hover:shadow-lift"
-            >
-              <span className="font-medium">{t.name}</span>
-              <span className="mt-0.5 truncate text-xs text-muted">
-                {t.kind === 'cardio' ? t.cardio.map((c) => c.activity).join(', ') : `${t.strength.length} exercises`}
-              </span>
-            </Link>
-            {!t.builtIn && (
-              <button
-                onClick={() => confirm(`Delete template “${t.name}”?`) && deleteTemplate(t.id)}
-                className="absolute right-1 top-1 grid h-8 w-8 place-items-center text-muted"
-                aria-label={`Delete template ${t.name}`}
-              >
-                <Trash size={14} weight="bold" />
-              </button>
-            )}
-            {t.kind === 'cardio' && (
-              <span className="pointer-events-none absolute bottom-2 right-2">
-                <Tag tone="car">Cardio</Tag>
-              </span>
-            )}
-          </div>
+      <div className="no-scrollbar -mx-4 flex snap-x scroll-px-4 gap-2 overflow-x-auto px-4 pb-1">
+        {recs.map((r) => {
+          const t = buildTemplate(r.def, prefs.equipment, prefs.level, prefs.goal);
+          return <TemplateCard key={t.id} t={t} reason={r.reason} onOpen={() => setOpen(t)} className="w-[290px] shrink-0 snap-start" />;
+        })}
+      </div>
+
+      <SectionTitle>
+        <span className="inline-flex items-center gap-1.5">
+          <Lightning size={12} weight="fill" /> {favTemplates.length ? 'Favourite templates' : 'One-tap templates'}
+        </span>
+      </SectionTitle>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {quick.map((t) => (
+          <TemplateCard key={t.id} t={t} onOpen={() => setOpen(t)} />
         ))}
       </div>
+      <Link
+        to={`/templates?date=${date}`}
+        className="mt-2 flex h-12 items-center justify-center gap-2 rounded-btn border border-dashed border-line text-sm font-medium text-muted hover:bg-raised"
+      >
+        <SquaresFour size={16} weight="bold" /> Browse all templates · Machine, Free weights, Mixed
+      </Link>
+
+      {userTemplates.length > 0 && (
+        <>
+          <SectionTitle>
+            <span className="inline-flex items-center gap-1.5">
+              <BookmarkSimple size={12} weight="fill" /> My templates
+            </span>
+          </SectionTitle>
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+            {userTemplates.map((t) => (
+              <div key={t.id} className="relative">
+                <Link
+                  to={q({ template: t.id })}
+                  className="flex min-h-[72px] flex-col justify-center rounded-card border border-line bg-surface px-4 py-3 pr-9 transition-shadow hover:shadow-lift"
+                >
+                  <span className="font-medium">{t.name}</span>
+                  <span className="mt-0.5 truncate text-xs text-muted">
+                    {t.kind === 'cardio' ? t.cardio.map((c) => c.activity).join(', ') : `${t.strength.length} exercises`}
+                  </span>
+                </Link>
+                <button
+                  onClick={() => confirm(`Delete template “${t.name}”?`) && deleteTemplate(t.id)}
+                  className="absolute right-1 top-1 grid h-8 w-8 place-items-center text-muted"
+                  aria-label={`Delete template ${t.name}`}
+                >
+                  <Trash size={14} weight="bold" />
+                </button>
+                {t.kind === 'cardio' && (
+                  <span className="pointer-events-none absolute bottom-2 right-2">
+                    <Tag tone="car">Cardio</Tag>
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       {(favs.length > 0 || favCardio.length > 0) && (
         <>
@@ -191,6 +242,8 @@ export default function LogHub() {
           </div>
         </>
       )}
+
+      <TemplateSheet t={open} onClose={() => setOpen(null)} date={date} />
 
       <p className="mt-10 text-center text-xs text-muted">
         Star any exercise to pin it here. Any workout can be saved as a template from the editor.

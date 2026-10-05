@@ -95,9 +95,15 @@ export interface Template {
   name: string;
   kind: SessionKind;
   builtIn?: boolean;
-  strength: { exercise: string; muscleGroup: MuscleGroup; sets: number }[];
+  strength: { exercise: string; muscleGroup: MuscleGroup; sets: number; reps?: number }[];
   cardio: { activity: string; durationMin: number }[];
+  /** Strength templates that end with a cardio block (e.g. Core + Cardio). */
+  thenCardio?: { activity: string; durationMin: number };
 }
+
+export type Level = 'beginner' | 'intermediate' | 'advanced';
+export type Equipment = 'machine' | 'free' | 'bodyweight';
+export type EquipmentChoice = 'machine' | 'free' | 'mixed';
 
 // ---------- Profile, body measurements, goals ----------
 
@@ -133,6 +139,10 @@ export interface Profile {
   gender?: Gender;
   goal?: FitnessGoalFocus;
   activityLevel?: ActivityLevel;
+  /** Training level used to size templates (default intermediate). */
+  experienceLevel?: Level;
+  /** Preferred equipment for templates and recommendations ('any' = mixed). */
+  equipmentPref?: EquipmentChoice | 'any';
   /** Daily hydration target in ml (manual). Falls back to the weight-based suggestion. */
   waterTargetMl?: number;
   /** Add extra water to the target on workout days (default on). */

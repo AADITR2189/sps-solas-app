@@ -128,16 +128,18 @@ The bottom navigation reads **Home · Calendar · [+] · History · Progress**. 
 
 | Screen | Route | Contents |
 |---|---|---|
-| Dashboard | `#/` | Today, overview tiles, week and month, the strength and cardio analytics below, recent workouts, goal completion |
-| Log | `#/log` | Date (back-dating), Strength and Cardio buttons, templates, favourites, frequent and recent, draft resume |
+| Dashboard | `#/` | Today, weekly ring, water, **muscle heat map** (Last workout / 7 / 30 days / All time, tap a muscle, ranked list), overview tiles, week and month, the strength and cardio analytics below, recent workouts, goal completion |
+| Log | `#/log` | Date (back-dating), Strength / Cardio / Water buttons, **Recommended for you** (under-trained this week, rested 48 h+), favourite or classic templates, my templates, favourites, frequent and recent, draft resume |
 | Editor | `#/log/edit` | Date, duration, name. Strength: autocomplete quick-add, browse with filters, sets grid, "last time" hint. Cardio: duration\*, distance, calories, average HR, notes. Save as template, delete. |
+| Templates | `#/templates?date=` | 108 one-tap templates: Classic / Single / Two / Three tabs, Favourites, equipment + difficulty filters, search, detail sheet (mini muscle map, primary/secondary, difficulty, duration, sets, rep range, rest, exercise list with last weight) and Start |
+| Workout details | `#/session?id=` | Tapping any past workout: stats, PRs, single-colour muscle map + ranked list, expandable exercises with their own map and sets, Edit |
 | Calendar | `#/calendar` | Month grid with strength and cardio dots, day detail, backfill buttons |
 | History | `#/history` | Search, date presets or a custom range, type and muscle filters |
 | Progress | `#/progress` | Streak, days this month, body weight, goal %, active days, body-weight trend, goals, exercise progression, strength improvement, strongest lifts, muscle frequency, personal bests |
-| Profile | `#/profile` | Name, height, weight, age, gender, fitness goal, activity level. BMI and maintenance calories. Weigh-in log with trend. |
+| Profile | `#/profile` | Name, height, weight, age, gender, fitness goal, activity level. **Training preferences** (experience level, equipment). BMI and maintenance calories. Weigh-in log with trend. |
 | Water | `#/water?date=` | Animated progress ring, three one-tap sizes (set in Profile), custom amount, undo, back-dating, edit and delete entries |
 | Goals | `#/goals` | Six goal types, live progress bars, overall %, deadline, archive and restore |
-| Exercises | `#/exercises` | Searchable, filterable library (by muscle, Legs, favourites, recent, frequent, custom) with per-exercise history, PR and "Log today" |
+| Exercises | `#/exercises` | Searchable, filterable library (by muscle, Legs, favourites, recent, frequent, custom) with per-exercise muscle map, equipment, history, PR and "Log today" |
 | Settings | `#/settings` | Theme, units, Excel/PDF/CSV export with a date range, backup and restore, CSV import, storage, install help, custom exercises, sample data, erase |
 
 ---
@@ -239,13 +241,40 @@ fitness-tracker/
 └─ src/
    ├─ main.tsx · App.tsx · index.css · types.ts
    ├─ data/exercises.ts     muscle groups and your exercise library
-   ├─ data/cardio.ts        cardio categories and activities, templates
+   ├─ data/cardio.ts        cardio categories and activities
+   ├─ data/muscles.ts       18 heat-map regions + muscles/equipment for every exercise
+   ├─ data/templateCatalog.ts  exercise pools per equipment + the 36 template definitions
    ├─ db/db.ts              IndexedDB v2 schema, repository, migration, backup
    ├─ hooks/useData.ts
-   ├─ lib/                  stats, goals, body, export, csv, date, theme, reveal, demo
-   ├─ components/           ui, charts, ExercisePicker, SessionCard, BottomNav
+   ├─ lib/                  stats, goals, body, export, csv, date, theme, reveal, demo, water, anim
+   ├─ lib/heatmap.ts        muscle load (weight × reps, primary 100 % / secondary 50 %), colour scale
+   ├─ lib/templates.ts      template generator (level, goal, equipment) + recommendations
+   ├─ components/           ui, charts, ExercisePicker, SessionCard, BottomNav, BodyMap, HeatMapViews, TemplateViews
    └─ pages/                10 screens
 ```
+
+---
+
+## 9b. Muscle heat map and template library
+
+**Heat map.** Each exercise has primary and secondary muscles (`data/muscles.ts`, 18 regions). A set's load is
+`reps × (weight + body weight × factor)`; the factor only applies to bodyweight moves (push-ups 0.65, pull-ups/dips 1,
+plank 0.05). Primary muscles get 100 % of the load, secondary 50 %. Intensity = load ÷ the most-loaded region. The
+dashboard uses a blue → yellow → orange → red scale (blue rather than green so it works for red-green colour
+blindness); workout details use one colour (darker = more involvement). Untrained muscles are grey. If nothing in the
+range has a weight (all 0 kg) the map counts sets instead.
+
+**Templates.** `data/templateCatalog.ts` holds 13 exercise pools (chest, back, rear delts, … core) each in Machine /
+Free weights / Mixed order, and 36 definitions (7 classic, 11 single, 10 two-muscle, 8 three-muscle) as weighted
+parts. `lib/templates.ts` builds each template on the fly for the chosen level and goal: exercise count (single 3/4/5,
+others 4/5/6), seats split by part weight (D'Hondt), sets (first per muscle 3/4/5, then 2/3/4), reps from the goal,
+rest 60/90/120 s, duration = sets × (45 s + rest) + 5 min. Templates ending in cardio carry a `thenCardio` block and
+the save screen offers "Continue to cardio". Old `tpl-*` ids map to the Mixed classic templates. Nothing is stored:
+templates are pure functions of the definition, so changing level or equipment never needs a migration. Favourites
+use the key `template:<defId>`. The full list is in [TEMPLATE_CATALOG.md](TEMPLATE_CATALOG.md).
+
+**Recommendations** score single, two-muscle and classic templates by days since each muscle was last trained and
+its share of the last 7 days' sets, skipping anything trained in the last 48 h.
 
 ---
 

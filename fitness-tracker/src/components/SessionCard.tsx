@@ -22,7 +22,7 @@ export default function SessionCard({ s, showDate = true }: { s: Session; showDa
   const dur = sessionDuration(s);
   return (
     <Link
-      to={`/log/edit?id=${s.id}`}
+      to={`/session?id=${s.id}`}
       className="flex min-w-0 items-center gap-3 rounded-card border border-line bg-surface p-3.5 transition-shadow hover:shadow-lift active:scale-[0.995]"
     >
       <IconBadge tone={isCardio ? 'car' : 'str'}>{isCardio ? <Heartbeat size={20} weight="bold" /> : <Barbell size={20} weight="bold" />}</IconBadge>

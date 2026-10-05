@@ -10,7 +10,10 @@ import { bmi, bmiLabel, currentWeight, dailyCalories, weightChange } from '../li
 import { formatShort, todayKey } from '../lib/date';
 import { fmtNum } from '../lib/stats';
 import { BONUS_ML_PER_HOUR, DEFAULT_QUICK_SIZES, DEFAULT_TARGET_ML, ML_PER_KG, fmtVolume, fromUnit, suggestedTargetMl, toUnit, unitLabel } from '../lib/water';
-import { Drop } from '@phosphor-icons/react';
+import { Drop, Barbell } from '@phosphor-icons/react';
+import { EQUIPMENT_CHOICES, LEVELS } from '../data/templateCatalog';
+import { LEVEL_RULES, repRangeLabel } from '../lib/templates';
+import type { EquipmentChoice, Level } from '../types';
 
 type Form = Omit<Profile, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -132,6 +135,8 @@ export default function ProfilePage() {
         </p>
       </Card>
 
+      <TrainingSection />
+
       <HydrationSection />
 
       <SectionTitle>Body weight log</SectionTitle>
@@ -202,6 +207,60 @@ function Choice({ active, onClick, children }: { active: boolean; onClick: () =>
     >
       {children}
     </button>
+  );
+}
+
+/** Level + equipment used to size templates and pick recommendations. Saves on tap. */
+function TrainingSection() {
+  const { profile } = useData();
+  const level: Level = profile?.experienceLevel ?? 'intermediate';
+  const equip = profile?.equipmentPref ?? 'any';
+  const rules = LEVEL_RULES[level];
+  const save = (patch: { experienceLevel?: Level; equipmentPref?: EquipmentChoice | 'any' }) =>
+    saveProfile({ ...(profile ?? { name: '' }), ...patch });
+  const equipOptions: { id: EquipmentChoice | 'any'; label: string; hint: string }[] = [
+    ...EQUIPMENT_CHOICES,
+    { id: 'any', label: 'Any', hint: 'Show me everything (uses Mixed)' },
+  ];
+  return (
+    <>
+      <SectionTitle>
+        <span className="inline-flex items-center gap-1.5">
+          <Barbell size={12} weight="bold" /> Training preferences
+        </span>
+      </SectionTitle>
+      <Card className="space-y-4">
+        <Field label="Experience level" group>
+          <div className="grid grid-cols-3 gap-2">
+            {LEVELS.map((l) => (
+              <Choice key={l.id} active={level === l.id} onClick={() => save({ experienceLevel: l.id })}>
+                <span>
+                  <span className="block">{l.label}</span>
+                  <span className="block text-[11px] leading-snug opacity-75">{l.hint}</span>
+                </span>
+              </Choice>
+            ))}
+          </div>
+        </Field>
+        <Field label="Equipment" group>
+          <div className="grid grid-cols-2 gap-2">
+            {equipOptions.map((e) => (
+              <Choice key={e.id} active={equip === e.id} onClick={() => save({ equipmentPref: e.id })}>
+                <span>
+                  <span className="block">{e.label}</span>
+                  <span className="block text-[11px] leading-snug opacity-75">{e.hint}</span>
+                </span>
+              </Choice>
+            ))}
+          </div>
+        </Field>
+        <div className="num rounded-btn bg-raised px-3 py-2.5 text-sm">
+          Templates for you: <b>{rules.exercises[0]}–{rules.exercises[1]}</b> exercises · <b>{rules.sets}–{rules.topSets}</b> sets each ·{' '}
+          <b>{repRangeLabel(profile?.goal)}</b> reps · <b>{rules.restSec} s</b> rest
+          <span className="mt-0.5 block text-xs text-muted">Reps follow your goal above. You can still pick another level on any template.</span>
+        </div>
+      </Card>
+    </>
   );
 }
 

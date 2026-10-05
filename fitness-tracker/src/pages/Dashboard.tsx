@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { MuscleHeatCard } from '../components/HeatMapViews';
 import { Link } from 'react-router-dom';
 import { GearSix, UserCircle, CheckCircle, Circle, Barbell, Heartbeat, Plus, Trophy, Target, Drop, CaretRight, Fire } from '@phosphor-icons/react';
 import { useData } from '../hooks/useData';
@@ -147,6 +148,11 @@ export default function Dashboard() {
       <div className="mt-2 grid gap-2 md:grid-cols-2">
         <WeekRingCard done={d.week.sessions} target={d.weekGoal ?? 4} hasGoal={d.weekGoal !== undefined} />
         <WaterCard />
+      </div>
+
+      {/* Muscle heat map */}
+      <div className="mt-2">
+        <MuscleHeatCard />
       </div>
 
       {/* Overview */}
