@@ -18,6 +18,7 @@ import type {
 } from '../types';
 import { DEFAULT_SETTINGS, MUSCLE_GROUPS } from '../types';
 import { applyTheme } from '../lib/theme';
+import { setCustomMeta } from '../data/muscles';
 
 interface DataState {
   ready: boolean;
@@ -96,6 +97,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   useEffect(() => applyTheme(state.settings.theme), [state.settings.theme]);
 
   const value = useMemo<DataCtx>(() => {
+    setCustomMeta(state.exercises.filter((e) => e.isCustom));
     const library = {} as Record<MuscleGroup, string[]>;
     for (const g of MUSCLE_GROUPS) {
       const fromDb = state.exercises.filter((e) => e.muscleGroup === g).map((e) => e.name);

@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MagnifyingGlass, CaretDown, Plus, Trophy } from '@phosphor-icons/react';
+import { ArrowLeft, MagnifyingGlass, CaretDown, Plus, Trophy, PencilSimple } from '@phosphor-icons/react';
 import { useData } from '../hooks/useData';
-import { Card, Tag, inputCls } from '../components/ui';
+import { Button, Card, Tag, inputCls } from '../components/ui';
+import { MuscleEditor, type MuscleChoice } from '../components/MuscleEditor';
+import { updateCustomExercise } from '../db/db';
 import { FavStar, FilterRow, useExerciseSearch, type ExerciseFilter } from '../components/ExercisePicker';
 import { groupName } from '../data/exercises';
 import { fmtNum } from '../lib/stats';
@@ -116,18 +118,39 @@ export default function ExercisesPage() {
   );
 }
 
-/** Which muscles an exercise works, with a small body map. */
+/** Which muscles an exercise works, with a small body map. Custom exercises can be edited here. */
 function MuscleInfo({ name, group }: { name: string; group: MuscleGroup }) {
+  const { customExercises } = useData();
+  const custom = customExercises.find((e) => e.name === name);
   const meta = exerciseMeta(name, group);
+  const [edit, setEdit] = useState<MuscleChoice | null>(null);
+  if (edit && custom)
+    return (
+      <div className="mb-3 rounded-card border border-line p-3">
+        <MuscleEditor value={edit} onChange={setEdit} />
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <Button onClick={() => setEdit(null)}>Cancel</Button>
+          <Button
+            variant="primary"
+            disabled={!edit.primary.length}
+            onClick={async () => {
+              await updateCustomExercise(custom.id, edit);
+              setEdit(null);
+            }}
+          >
+            Save muscles
+          </Button>
+        </div>
+      </div>
+    );
   return (
     <div className="mb-3 flex items-center gap-3">
       <BodyMap values={exerciseIntensity(name, group)} mode="mono" view="auto" width={44} compact />
       <div className="min-w-0 flex-1 text-xs">
-        {meta.known && (
-          <div className="mb-1">
-            <Tag tone="str">{EQUIPMENT_LABEL[meta.equipment]}</Tag>
-          </div>
-        )}
+        <div className="mb-1 flex flex-wrap gap-1.5">
+          {meta.known && <Tag tone="str">{EQUIPMENT_LABEL[meta.equipment]}</Tag>}
+          {custom && <Tag>Custom</Tag>}
+        </div>
         <div>
           <span className="text-muted">Main:</span> {meta.primary.map((r) => regionInfo(r).name).join(', ')}
         </div>
@@ -135,6 +158,14 @@ function MuscleInfo({ name, group }: { name: string; group: MuscleGroup }) {
           <div className="mt-0.5">
             <span className="text-muted">Helpers:</span> {meta.secondary.map((r) => regionInfo(r).name).join(', ')}
           </div>
+        )}
+        {custom && (
+          <button
+            onClick={() => setEdit({ primary: [...meta.primary], secondary: [...meta.secondary], equipment: custom.equipment ?? meta.equipment })}
+            className="mt-1.5 inline-flex items-center gap-1 font-medium text-str"
+          >
+            <PencilSimple size={12} weight="bold" /> Edit muscles
+          </button>
         )}
       </div>
     </div>

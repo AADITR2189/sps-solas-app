@@ -189,6 +189,142 @@ export const EXERCISE_META: Record<string, ExerciseMeta> = {
   Burpees: m(B, ['quads', 'chest'], ['frontDelts', 'triceps', 'abs'], 0.5),
   Snatch: m(F, ['traps', 'glutes', 'quads'], ['frontDelts', 'hamstrings', 'lowerBack']),
   'Turkish Get Up': m(F, ['frontDelts', 'abs'], ['obliques', 'glutes', 'traps']),
+  // More chest
+  'Incline Push Ups': m(B, ['chest'], ['triceps', 'frontDelts'], 0.45),
+  'Decline Push Ups': m(B, ['chest', 'frontDelts'], ['triceps'], 0.75),
+  'Wide Push Ups': m(B, ['chest'], ['frontDelts', 'triceps'], 0.65),
+  'Chest Dips': m(B, ['chest', 'triceps'], ['frontDelts'], 1),
+  'Cable Crossover': m(M, ['chest'], ['frontDelts']),
+  'Low to High Cable Fly': m(M, ['chest', 'frontDelts'], []),
+  'High to Low Cable Fly': m(M, ['chest'], ['frontDelts']),
+  'Incline Cable Fly': m(M, ['chest', 'frontDelts'], []),
+  'Incline Machine Press': m(M, ['chest', 'frontDelts'], ['triceps']),
+  'Incline Smith Machine Press': m(M, ['chest', 'frontDelts'], ['triceps']),
+  'Incline Dumbbell Fly': m(F, ['chest'], ['frontDelts']),
+  'Floor Press': m(F, ['chest', 'triceps'], ['frontDelts']),
+  'Svend Press': m(F, ['chest'], ['frontDelts']),
+  // More back
+  'Neutral Grip Pull Ups': m(B, ['lats'], ['biceps', 'forearms', 'rearDelts'], 1),
+  'Assisted Pull Up': m(M, ['lats'], ['biceps', 'rearDelts']),
+  'Inverted Row': m(B, ['lats', 'traps'], ['biceps', 'rearDelts'], 0.6),
+  'Pendlay Row': m(F, ['lats', 'traps'], ['rearDelts', 'biceps', 'lowerBack']),
+  'Chest Supported Row': m(F, ['lats', 'traps'], ['rearDelts', 'biceps']),
+  'Seal Row': m(F, ['lats', 'traps'], ['rearDelts', 'biceps']),
+  'Kettlebell Row': m(F, ['lats'], ['biceps', 'rearDelts']),
+  'Single Arm Lat Pulldown': m(M, ['lats'], ['biceps']),
+  'Single Arm Cable Row': m(M, ['lats'], ['biceps', 'rearDelts', 'obliques']),
+  'Pullover Machine': m(M, ['lats'], ['chest', 'triceps']),
+  'Barbell Shrug': m(F, ['traps'], ['forearms']),
+  'Dumbbell Shrug': m(F, ['traps'], ['forearms']),
+  'Smith Machine Shrug': m(M, ['traps'], ['forearms']),
+  'Cable Shrug': m(M, ['traps'], []),
+  'Back Extension': m(B, ['lowerBack'], ['glutes', 'hamstrings'], 0.5),
+  'Superman': m(B, ['lowerBack'], ['glutes', 'rearDelts'], 0.15),
+  // More shoulders
+  'Standing Dumbbell Press': m(F, ['frontDelts'], ['sideDelts', 'triceps', 'abs']),
+  'Push Press': m(F, ['frontDelts'], ['triceps', 'quads', 'glutes', 'traps']),
+  'Smith Machine Shoulder Press': m(M, ['frontDelts'], ['sideDelts', 'triceps']),
+  'Cable Front Raise': m(M, ['frontDelts'], ['sideDelts']),
+  'Plate Front Raise': m(F, ['frontDelts'], ['sideDelts', 'traps']),
+  'Cable Rear Delt Fly': m(M, ['rearDelts'], ['traps']),
+  'Bent Over Lateral Raise': m(F, ['rearDelts'], ['sideDelts', 'traps']),
+  'Y Raise': m(F, ['sideDelts', 'rearDelts'], ['traps']),
+  'Pike Push Ups': m(B, ['frontDelts'], ['triceps', 'chest'], 0.5),
+  'Handstand Push Ups': m(B, ['frontDelts', 'triceps'], ['traps', 'sideDelts'], 1),
+  'Seated Lateral Raise': m(F, ['sideDelts'], ['traps']),
+  'Lu Raise': m(F, ['sideDelts', 'frontDelts'], ['traps']),
+  // More biceps
+  'Drag Curl': m(F, ['biceps'], ['forearms']),
+  'Zottman Curl': m(F, ['biceps', 'forearms'], []),
+  'Cross Body Hammer Curl': m(F, ['biceps', 'forearms'], []),
+  'Dumbbell Preacher Curl': m(F, ['biceps'], []),
+  'Cable Preacher Curl': m(M, ['biceps'], []),
+  'High Cable Curl': m(M, ['biceps'], []),
+  // More triceps
+  'Diamond Push Ups': m(B, ['triceps', 'chest'], ['frontDelts'], 0.6),
+  'Close Grip Push Ups': m(B, ['triceps', 'chest'], ['frontDelts'], 0.65),
+  'Overhead Cable Extension': m(M, ['triceps'], []),
+  'Reverse Grip Pushdown': m(M, ['triceps'], ['forearms']),
+  'Machine Dips': m(M, ['triceps', 'chest'], ['frontDelts']),
+  'Dumbbell Skull Crushers': m(F, ['triceps'], []),
+  'Tate Press': m(F, ['triceps'], ['chest']),
+  // More forearms
+  'Behind the Back Wrist Curl': m(F, ['forearms'], []),
+  'Suitcase Carry': m(F, ['forearms', 'obliques'], ['traps', 'abs']),
+  'Dead Hang': m(B, ['forearms'], ['lats'], 0.1),
+  'Hand Gripper': m(F, ['forearms'], []),
+  // More quads
+  'Bodyweight Squat': m(B, ['quads', 'glutes'], ['adductors'], 0.6),
+  'Jump Squats': m(B, ['quads', 'glutes'], ['calves', 'hamstrings'], 0.7),
+  'Smith Machine Squat': m(M, ['quads', 'glutes'], ['hamstrings', 'adductors']),
+  'Pendulum Squat': m(M, ['quads'], ['glutes']),
+  'Belt Squat': m(M, ['quads', 'glutes'], ['adductors']),
+  'Single Leg Press': m(M, ['quads', 'glutes'], ['hamstrings']),
+  'Box Squat': m(F, ['quads', 'glutes'], ['hamstrings', 'lowerBack']),
+  'Lunges': m(F, ['quads', 'glutes'], ['hamstrings', 'adductors']),
+  'Reverse Lunges': m(F, ['quads', 'glutes'], ['hamstrings', 'adductors']),
+  'Split Squat': m(F, ['quads', 'glutes'], ['hamstrings', 'adductors']),
+  'Lateral Lunge': m(F, ['quads', 'adductors'], ['glutes']),
+  'Sissy Squat': m(B, ['quads'], [], 0.5),
+  'Pistol Squat': m(B, ['quads', 'glutes'], ['adductors', 'abs'], 0.9),
+  'Wall Sit': m(B, ['quads'], ['glutes'], 0.05),
+  'Hip Adduction Machine': m(M, ['adductors'], []),
+  'Cable Hip Adduction': m(M, ['adductors'], []),
+  'Sumo Squat': m(F, ['adductors', 'quads', 'glutes'], ['hamstrings']),
+  'Copenhagen Plank': m(B, ['adductors'], ['obliques', 'abs'], 0.1),
+  // More hamstrings
+  'Lying Leg Curl': m(M, ['hamstrings'], ['calves']),
+  'Standing Leg Curl': m(M, ['hamstrings'], ['calves']),
+  'Dumbbell Romanian Deadlift': m(F, ['hamstrings', 'glutes'], ['lowerBack', 'forearms']),
+  'Single Leg Romanian Deadlift': m(F, ['hamstrings', 'glutes'], ['lowerBack', 'abductors']),
+  'Stability Ball Leg Curl': m(B, ['hamstrings'], ['glutes', 'calves'], 0.3),
+  // More glutes
+  'Barbell Glute Bridge': m(F, ['glutes'], ['hamstrings']),
+  'Single Leg Hip Thrust': m(B, ['glutes'], ['hamstrings', 'abductors'], 0.5),
+  'Single Leg Glute Bridge': m(B, ['glutes'], ['hamstrings'], 0.35),
+  'Smith Machine Hip Thrust': m(M, ['glutes'], ['hamstrings']),
+  'Cable Pull Through': m(M, ['glutes', 'hamstrings'], ['lowerBack']),
+  'Reverse Hyperextension': m(M, ['glutes', 'hamstrings'], ['lowerBack']),
+  'Curtsy Lunge': m(F, ['glutes', 'quads'], ['adductors', 'abductors']),
+  'Frog Pumps': m(B, ['glutes'], ['adductors'], 0.3),
+  'Donkey Kicks': m(B, ['glutes'], ['hamstrings'], 0.15),
+  'Fire Hydrants': m(B, ['abductors', 'glutes'], [], 0.1),
+  'Cable Hip Abduction': m(M, ['abductors', 'glutes'], []),
+  'Lateral Band Walk': m(B, ['abductors', 'glutes'], [], 0.05),
+  'Side Lying Leg Raise': m(B, ['abductors'], ['glutes', 'obliques'], 0.1),
+  // More calves
+  'Single Leg Calf Raise': m(B, ['calves'], [], 0.9),
+  'Bodyweight Calf Raise': m(B, ['calves'], [], 1),
+  'Smith Machine Calf Raise': m(M, ['calves'], []),
+  'Tibialis Raise': m(B, ['calves'], [], 0.1),
+  // More abs
+  'Sit-Ups': m(B, ['abs'], ['obliques'], 0.35),
+  'Lying Leg Raise': m(B, ['abs'], ['obliques'], 0.3),
+  'Hanging Knee Raise': m(B, ['abs'], ['obliques', 'forearms'], 0.25),
+  "Captain's Chair Leg Raise": m(B, ['abs'], ['obliques'], 0.3),
+  'V-Ups': m(B, ['abs'], ['obliques'], 0.35),
+  'Flutter Kicks': m(B, ['abs'], ['quads'], 0.15),
+  'Dead Bug': m(B, ['abs'], ['obliques'], 0.1),
+  'Hollow Body Hold': m(B, ['abs'], ['obliques'], 0.05),
+  'Toe Touches': m(B, ['abs'], [], 0.2),
+  'Heel Taps': m(B, ['obliques'], ['abs'], 0.1),
+  'Windshield Wipers': m(B, ['obliques', 'abs'], [], 0.3),
+  'Plank Shoulder Taps': m(B, ['abs', 'obliques'], ['frontDelts'], 0.1),
+  'Bird Dog': m(B, ['lowerBack', 'abs'], ['glutes'], 0.05),
+  'Pallof Press': m(M, ['obliques', 'abs'], []),
+  'Cable Side Bend': m(M, ['obliques'], []),
+  'Landmine Rotation': m(F, ['obliques', 'abs'], ['frontDelts']),
+  // More full body
+  'Power Clean': m(F, ['traps', 'glutes', 'quads'], ['hamstrings', 'lowerBack', 'forearms']),
+  'Hang Clean': m(F, ['traps', 'glutes'], ['quads', 'hamstrings', 'forearms']),
+  'Kettlebell Clean and Press': m(F, ['frontDelts', 'glutes'], ['triceps', 'quads', 'abs']),
+  'Wall Balls': m(F, ['quads', 'frontDelts'], ['glutes', 'triceps']),
+  'Man Makers': m(F, ['chest', 'frontDelts', 'quads'], ['triceps', 'lats', 'abs']),
+  'Medicine Ball Slam': m(F, ['lats', 'abs'], ['frontDelts', 'triceps']),
+  'Battle Ropes': m(F, ['frontDelts'], ['forearms', 'abs', 'biceps']),
+  'Sled Push': m(M, ['quads', 'glutes'], ['calves', 'hamstrings']),
+  'Box Jumps': m(B, ['quads', 'glutes'], ['calves', 'hamstrings'], 0.3),
+  'Bear Crawl': m(B, ['frontDelts', 'abs'], ['quads', 'triceps'], 0.2),
 };
 
 /** Fallback regions for custom exercises, by the muscle group they were created under. */
@@ -207,9 +343,19 @@ const GROUP_FALLBACK: Record<MuscleGroup, Region[]> = {
   'FULL BODY': ['quads', 'glutes', 'chest', 'lats'],
 };
 
-/** Muscle + equipment info for any exercise (custom ones fall back to their muscle group). */
+export const GROUP_REGIONS = GROUP_FALLBACK;
+
+/** Muscles the user picked for their custom exercises (kept in sync by the data provider). */
+const customMeta = new Map<string, ExerciseMeta>();
+export function setCustomMeta(list: { name: string; primary?: Region[]; secondary?: Region[]; equipment?: Equipment }[]) {
+  customMeta.clear();
+  for (const e of list)
+    if (e.primary?.length) customMeta.set(e.name, { equipment: e.equipment ?? 'free', primary: e.primary, secondary: e.secondary ?? [] });
+}
+
+/** Muscle + equipment info for any exercise (custom ones use the muscles picked when adding them, else their group). */
 export function exerciseMeta(name: string, group: MuscleGroup): ExerciseMeta & { known: boolean } {
-  const meta = EXERCISE_META[name];
+  const meta = EXERCISE_META[name] ?? customMeta.get(name);
   if (meta) return { ...meta, known: true };
   return { equipment: 'free', primary: GROUP_FALLBACK[group], secondary: [], known: false };
 }

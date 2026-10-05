@@ -283,8 +283,15 @@ export async function getPersonalRecords() {
 export async function getExercises(): Promise<Exercise[]> {
   return (await db()).getAll('exercises');
 }
-export async function addCustomExercise(name: string, muscleGroup: MuscleGroup) {
-  await (await db()).put('exercises', { id: uid(), name, muscleGroup, isCustom: true });
+export async function addCustomExercise(name: string, muscleGroup: MuscleGroup, muscles?: Pick<Exercise, 'primary' | 'secondary' | 'equipment'>) {
+  await (await db()).put('exercises', { id: uid(), name, muscleGroup, isCustom: true, ...muscles });
+  notify();
+}
+/** Update the muscles / equipment of a custom exercise. */
+export async function updateCustomExercise(id: string, patch: Pick<Exercise, 'primary' | 'secondary' | 'equipment'>) {
+  const d = await db();
+  const row = await d.get('exercises', id);
+  if (row?.isCustom) await d.put('exercises', { ...row, ...patch });
   notify();
 }
 export async function deleteCustomExercise(id: string) {
@@ -446,7 +453,7 @@ export async function importBackup(b: BackupFile, mode: 'replace' | 'merge') {
   }
   for (const s of b.sessions ?? []) await writeSessionRows(tx as unknown as SessionTx, s);
   for (const e of b.customExercises ?? [])
-    await tx.objectStore('exercises').put({ id: e.id, name: e.name, muscleGroup: e.muscleGroup, isCustom: true });
+    await tx.objectStore('exercises').put({ ...e, isCustom: true });
   for (const c of b.customCardio ?? []) await tx.objectStore('customCardio').put(c);
   for (const f of b.favorites ?? []) await tx.objectStore('favorites').put(f);
   for (const t of b.templates ?? []) await tx.objectStore('templates').put(t);
