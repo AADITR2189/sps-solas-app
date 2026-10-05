@@ -7,6 +7,7 @@ import { exerciseUsage, cardioUsage } from '../lib/stats';
 import { addCustomCardio, addCustomExercise, toggleFavorite, uid } from '../db/db';
 import { MUSCLE_GROUP_INFO, groupName } from '../data/exercises';
 import { CARDIO_CATEGORIES } from '../data/cardio';
+import { CustomExerciseAdd } from './MuscleEditor';
 
 export type ExerciseFilter = 'all' | 'favorites' | 'recent' | 'frequent' | 'custom' | 'LEGS' | MuscleGroup;
 type Item = { name: string; group: MuscleGroup };
@@ -228,15 +229,13 @@ export function ExercisePicker({
         <MagnifyingGlass size={18} weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
         <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search exercises" className={`${inputCls} pl-10`} />
       </div>
-      <CustomAdd
-        noun="exercise"
+      <CustomExerciseAdd
         query={q}
         existing={allNames}
-        options={MUSCLE_GROUP_INFO.map((g) => ({ value: g.id, label: g.name }))}
-        defaultOption={filter in { CHEST: 1, BACK: 1, SHOULDERS: 1, BICEPS: 1, TRICEPS: 1, FOREARMS: 1, QUADS: 1, HAMSTRINGS: 1, GLUTES: 1, CALVES: 1, ABS: 1, 'FULL BODY': 1 } ? filter : 'CHEST'}
-        onAdd={async (name, g) => {
-          await addCustomExercise(name, g as MuscleGroup);
-          onPick(name, g as MuscleGroup);
+        defaultGroup={(MUSCLE_GROUPS as readonly string[]).includes(filter) ? (filter as MuscleGroup) : 'CHEST'}
+        onAdd={async (name, g, muscles) => {
+          await addCustomExercise(name, g, muscles);
+          onPick(name, g);
           setQ('');
         }}
       />

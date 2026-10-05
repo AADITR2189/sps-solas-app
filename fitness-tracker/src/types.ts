@@ -1,3 +1,5 @@
+import type { Region } from './data/muscles';
+
 // Core domain model. Persisted in IndexedDB as normalised stores (see src/db/db.ts);
 // the UI works with the assembled `Session` aggregate.
 
@@ -76,6 +78,10 @@ export interface Exercise {
   name: string;
   muscleGroup: MuscleGroup;
   isCustom: boolean;
+  /** Custom exercises: heat-map muscles chosen by the user (region ids from data/muscles.ts). */
+  primary?: Region[];
+  secondary?: Region[];
+  equipment?: Equipment;
 }
 
 export interface CustomCardio {
@@ -234,7 +240,7 @@ export interface BackupFile {
   version: 1 | 2;
   exportedAt: string;
   sessions: Session[];
-  customExercises?: { id: string; name: string; muscleGroup: MuscleGroup }[];
+  customExercises?: { id: string; name: string; muscleGroup: MuscleGroup; primary?: Region[]; secondary?: Region[]; equipment?: Equipment }[];
   customCardio?: CustomCardio[];
   favorites?: Favorite[];
   templates?: Template[];

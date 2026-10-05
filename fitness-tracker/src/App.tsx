@@ -23,6 +23,12 @@ function ScrollTop() {
   return null;
 }
 
+/** Start a fresh editor whenever its link changes (e.g. "Continue to cardio" after saving a workout). */
+function EditorRoute() {
+  const { search } = useLocation();
+  return <Editor key={search} />;
+}
+
 // HashRouter keeps routing working on any static host (GitHub Pages etc.) and offline.
 export default function App() {
   return (
@@ -34,7 +40,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/log" element={<LogHub />} />
-              <Route path="/log/edit" element={<Editor />} />
+              <Route path="/log/edit" element={<EditorRoute />} />
               <Route path="/templates" element={<TemplatesPage />} />
               <Route path="/session" element={<WorkoutDetails />} />
               <Route path="/calendar" element={<CalendarPage />} />

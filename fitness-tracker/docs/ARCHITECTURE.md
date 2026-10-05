@@ -262,7 +262,13 @@ fitness-tracker/
 plank 0.05). Primary muscles get 100 % of the load, secondary 50 %. Intensity = load ÷ the most-loaded region. The
 dashboard uses a blue → yellow → orange → red scale (blue rather than green so it works for red-green colour
 blindness); workout details use one colour (darker = more involvement). Untrained muscles are grey. If nothing in the
-range has a weight (all 0 kg) the map counts sets instead.
+range has a weight (all 0 kg) the map counts sets instead. Tapping a muscle lists every library exercise that trains it
+(main mover / also works it, with an equipment filter, exercises you already do first) with a one-tap Log link.
+
+**Custom exercises** store the muscles the user picks (`primary`, `secondary`, `equipment` on the `exercises` row,
+included in backups). The data provider registers them with `setCustomMeta`, so `exerciseMeta()` treats them like
+built-ins everywhere (heat map, details, exercise library). Older custom exercises without muscles fall back to their
+muscle group and can be edited from the Exercise library.
 
 **Templates.** `data/templateCatalog.ts` holds 13 exercise pools (chest, back, rear delts, … core) each in Machine /
 Free weights / Mixed order, and 36 definitions (7 classic, 11 single, 10 two-muscle, 8 three-muscle) as weighted
