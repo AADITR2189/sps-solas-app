@@ -4,7 +4,8 @@ import { ArrowLeft, Plus, Trash, CopySimple, NotePencil, Barbell, Heartbeat, Boo
 import { useData } from '../hooks/useData';
 import { Button, Card, Field, IconBadge, NumberInput, Tag, inputCls } from '../components/ui';
 import { ExercisePicker, CardioPicker, ExerciseAutocomplete } from '../components/ExercisePicker';
-import type { CardioEntry, MuscleGroup, Session, SessionKind, StrengthEntry } from '../types';
+import type { CardioEntry, Level, MuscleGroup, Session, SessionKind, StrengthEntry, Template } from '../types';
+import { prefsFrom, resolveTemplate } from '../lib/templates';
 import { deleteSession, saveSession, saveTemplate, uid } from '../db/db';
 import { formatLong, isValidKey, todayKey } from '../lib/date';
 import { entryVolume, fmtNum, lastSetsFor, personalRecords, sessionCardioMin, sessionVolume, fmtMinutes } from '../lib/stats';
@@ -39,7 +40,8 @@ function newSession(date: string, kind: SessionKind): Session {
 export default function Editor() {
   const [params] = useSearchParams();
   const nav = useNavigate();
-  const { ready, sessions, templates, settings, categoryOf } = useData();
+  const { ready, sessions, userTemplates, settings, categoryOf, profile } = useData();
+  const [nextCardio, setNextCardio] = useState<Template['thenCardio']>();
   const [s, setS] = useState<Session | null>(null);
   const [isNew, setIsNew] = useState(true);
   const [picker, setPicker] = useState(false);
@@ -74,7 +76,10 @@ export default function Editor() {
     }
     const dateParam = params.get('date') ?? '';
     const date = isValidKey(dateParam) ? dateParam : todayKey();
-    const tpl = templates.find((t) => t.id === params.get('template'));
+    const prefs = prefsFrom(profile);
+    const lvl = params.get('level');
+    const level: Level = lvl === 'beginner' || lvl === 'intermediate' || lvl === 'advanced' ? lvl : prefs.level;
+    const tpl = resolveTemplate(params.get('template'), level, prefs.goal, userTemplates);
     const kind: SessionKind = tpl?.kind ?? (params.get('kind') === 'cardio' ? 'cardio' : 'strength');
     const ns = newSession(date, kind);
     if (tpl) {
@@ -85,16 +90,22 @@ export default function Editor() {
           id: uid(),
           exercise: t.exercise,
           muscleGroup: t.muscleGroup,
-          sets: Array.from({ length: t.sets }, (_, i) => ({ ...(prev[i] ?? prev[prev.length - 1] ?? { reps: 10, weight: 0 }) })),
+          // Last-used weight; reps from the template when it sets them.
+          sets: Array.from({ length: t.sets }, (_, i) => {
+            const p = prev[i] ?? prev[prev.length - 1] ?? { reps: 10, weight: 0 };
+            return { reps: t.reps ?? p.reps, weight: p.weight };
+          }),
         };
       });
+      setNextCardio(tpl.thenCardio);
       ns.cardio = tpl.cardio.map((c) => ({ id: uid(), activity: c.activity, category: categoryOf(c.activity), durationMin: c.durationMin }));
     }
     const ex = params.get('exercise');
     const grp = params.get('group') as MuscleGroup | null;
     if (ex && grp) ns.strength.push(makeEntry(ex, grp));
     const act = params.get('activity');
-    if (act) ns.cardio.push({ id: uid(), activity: act, category: categoryOf(act), durationMin: 30 });
+    const dur = Number(params.get('duration'));
+    if (act) ns.cardio.push({ id: uid(), activity: act, category: categoryOf(act), durationMin: dur > 0 ? dur : 30 });
     setS(ns);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
@@ -376,7 +387,24 @@ export default function Editor() {
         </div>
       </div>
 
-      {celebrate && <SavedOverlay c={celebrate} unit={settings.weightUnit} onDone={goBack} />}
+      {celebrate && (
+        <SavedOverlay
+          c={celebrate}
+          unit={settings.weightUnit}
+          onDone={goBack}
+          next={
+            nextCardio && isNew && !isCardio
+              ? {
+                  label: `${nextCardio.activity} · ${nextCardio.durationMin} min`,
+                  go: () =>
+                    nav(`/log/edit?${new URLSearchParams({ date: s.date, kind: 'cardio', activity: nextCardio.activity, duration: String(nextCardio.durationMin) })}`, {
+                      replace: true,
+                    }),
+                }
+              : undefined
+          }
+        />
+      )}
 
       <ExercisePicker
         open={picker}
@@ -562,7 +590,7 @@ interface Celebration {
 }
 
 /** Full-screen "saved" moment: a drawn check mark, counting stats and any new PRs with a sparkle burst. */
-function SavedOverlay({ c, unit, onDone }: { c: Celebration; unit: string; onDone: () => void }) {
+function SavedOverlay({ c, unit, onDone, next }: { c: Celebration; unit: string; onDone: () => void; next?: { label: string; go: () => void } }) {
   const doneRef = useRef(false);
   const finish = () => {
     if (doneRef.current) return;
@@ -570,6 +598,8 @@ function SavedOverlay({ c, unit, onDone }: { c: Celebration; unit: string; onDon
     onDone();
   };
   useEffect(() => {
+    // With a cardio block to follow, wait for the user to choose.
+    if (next) return;
     const t = window.setTimeout(finish, c.prs.length ? 2600 : 1700);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -640,7 +670,25 @@ function SavedOverlay({ c, unit, onDone }: { c: Celebration; unit: string; onDon
             </ul>
           </div>
         )}
-        <div className="mt-5 text-xs text-muted">Tap anywhere to continue</div>
+        {next ? (
+          <div className="mt-5 space-y-2">
+            <Button
+              variant="primary"
+              className="w-full"
+              onClick={(e) => {
+                e.stopPropagation();
+                doneRef.current = true;
+                next.go();
+              }}
+            >
+              <Heartbeat size={18} weight="bold" /> Continue to cardio
+            </Button>
+            <div className="num text-sm">{next.label}</div>
+            <div className="text-xs text-muted">or tap anywhere to finish</div>
+          </div>
+        ) : (
+          <div className="mt-5 text-xs text-muted">Tap anywhere to continue</div>
+        )}
       </div>
     </div>
   );

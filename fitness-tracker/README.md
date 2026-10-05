@@ -16,7 +16,8 @@ Gym Diary is a private gym and cardio diary for one person. It works offline, ha
 - **Goals.** Workouts per week, cardio minutes, active days, body weight, lift targets and total volume, each with a live completion %.
 - **Dashboard.** Today, week and month, totals, current weight and weight change, average duration, and volume by week, month, day, muscle and year. PRs and weight progression. Cardio by type and activity, distance and calories trends.
 - **Progress.** Consistency streak, body-weight trend, exercise progression, strength improvement, strongest lifts, muscle frequency, personal bests and goal completion.
-- **Templates.** Push, Pull, Legs, Upper, Lower, Full Body and Cardio Day, and you can save your own.
+- **Muscle heat map.** See which muscles you've trained (last workout, 7 days, 30 days or all time) on a front/back body map, with a ranked list of weight and % per muscle. Tap any past workout for a details screen with its own map.
+- **108 one-tap templates.** 36 workouts (classic splits, single, two and three muscle) each in Machine, Free weights and Mixed versions. Sets, reps and rest follow your level and goal from Profile, weights pre-fill from last time, and "Recommended for you" suggests muscles you haven't trained this week. You can still save your own. Full list: [docs/TEMPLATE_CATALOG.md](docs/TEMPLATE_CATALOG.md).
 - **Export.** Excel (.xlsx, six sheets), a PDF report and CSV, all with an optional date range. JSON backup and restore.
 - **Dark and light themes**, or follow the phone's setting. Works on phone, tablet and desktop.
 
