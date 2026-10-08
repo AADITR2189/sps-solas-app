@@ -1,9 +1,9 @@
-name: Deploy Gym Diary (fitness-tracker) to GitHub Pages
+name: Deploy Gym Diary (gym_diary) to GitHub Pages
 
 on:
   push:
     branches: [main]
-    paths: ['fitness-tracker/**', '.github/workflows/deploy-fitness-tracker.yml']
+    paths: ['gym_diary/**', '.github/workflows/deploy-gym-diary.yml']
   workflow_dispatch:
 
 permissions:
@@ -20,19 +20,19 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: fitness-tracker
+        working-directory: gym_diary
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: fitness-tracker/package-lock.json
+          cache-dependency-path: gym_diary/package-lock.json
       - run: npm ci
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: fitness-tracker/dist
+          path: gym_diary/dist
 
   deploy:
     needs: build
