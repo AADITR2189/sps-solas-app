@@ -28,11 +28,11 @@ The app is a website that installs like an app. It must be hosted somewhere once
 **Option A: GitHub Pages (free, automatic)**
 1. Merge this branch into `main`.
 2. On GitHub, open the repo's **Settings → Pages**, then under *Build and deployment* set **Source = GitHub Actions**.
-3. The workflow `.github/workflows/deploy-fitness-tracker.yml` builds and publishes the app. Your link appears on the Actions run, usually `https://<your-username>.github.io/<repo-name>/`.
+3. The workflow `.github/workflows/deploy-gym-diary.yml` builds and publishes the app. Your link appears on the Actions run, usually `https://<your-username>.github.io/<repo-name>/`.
    *(GitHub Pages on a private repo needs a paid GitHub plan. If you don't have one, use option B.)*
 
 **Option B: Netlify Drop (free, drag-and-drop)**
-1. On a computer: `cd fitness-tracker && npm install && npm run build`
+1. On a computer: `cd gym_diary && npm install && npm run build`
 2. Drag the `dist` folder onto <https://app.netlify.com/drop>. You get a link.
 
 **Then install it:**
@@ -46,7 +46,7 @@ Want to explore first? Go to **Settings (gear icon on Home) → Load sample data
 ## For developers
 
 ```bash
-cd fitness-tracker
+cd gym_diary
 npm install
 npm run dev        # http://localhost:5173 (also on your LAN for phone testing)
 npm run build      # type-check + production build into dist/

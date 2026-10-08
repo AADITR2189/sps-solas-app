@@ -233,7 +233,7 @@ App (IconContext → DataProvider → HashRouter)
 ## 9. Source tree
 
 ```
-fitness-tracker/
+gym_diary/
 ├─ index.html · vite.config.ts · tailwind.config.js · tsconfig.json · package.json
 ├─ public/icons/            favicon.svg + PNGs (npm run icons)
 ├─ scripts/make-icons.mjs
